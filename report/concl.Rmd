@@ -1,0 +1,31 @@
+```{r, echo = FALSE, message = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+# 5. Conclusion
+
+## 5.1 Main Conclusions
+1.  **How are the thresholds of Air Pollution respected in NYC? In what Proportion?**
+
+To answer this question, we looked at the timeframe from 2010 until 2021. The data showed us that air pollution levels were quite high in 2010 and certain neighborhoods of Midtown Manhattan were considered a health threat, surpassing  the USEPA Primary PM2.5 level. Our analysis and visualisations have shown that despite a bad start in 2010, air quality levels across New York City have decreased across the entire city. However, when comparing USEPA with WHO standards, we discovered the entire city is considered dangerous to breathe in. To us, this was quite surprising and we follow the opinion that WHO's regulations are far too strict for now. If NYC continues the downward trend in air pollution, it may be able to comply with the WHO. 2020 was subject to far less air pollution given that there were almost no flights for an important part of the year due to COVID. In the future, it will be interesting if the levels are pursuing their decline in PM2.5 levels.
+
+2.  **What are the main characteristics of an area contributing to Air Pollution? Do the Boroughs have distinct characteristics?**
+
+Initially, our hypothesis was that only a few variables would be true predictors of PM2.5 levels in New York City. We saw that Vegetative Percent, Traffic density and subway density and the most important factors for predicting Air Pollution. Using clustering methods, we saw it was difficult to group the boroughs together. Some share similar characteristics, such as UHFs from the Bronx or Manhattan, but others are mixed with other Boroughs. Therefore, it is hard to conclude that they are truly different.
+
+3.  **Are there disparities in levels of Air Pollution between wealthier and poorer areas?**
+
+Our research has shown that the richest parts of New York City happen to be among the most populated and subject to the highest levels of Traffic density. In addition, we've seen that the rate of decrease in Air Pollution has been similar in low and high income UHF areas. Overall, it's rather difficult to find any sort of link between wealth and air pollution. Therefore, we would tend to answer negatively to this question, which is actually positive in the grand scheme of social equality. 
+
+## 5.2 Limitations
+1. Missing time-values of certain variables : we would have found interesting to explore the temporal aspect of our variables to truly determine why air pollution levels have decreased across the city.
+2. Spatial data : we would have like to have used Zip Codes rather than UHF areas in order to have more observations which would increase the precision of our statistical analysis.
+3. Emissions data : Drawing on Population & Traffic density, it would have been great to get actual figures about emissions in the city. For example, a csv file of emissions of every building which we would have regrouped by UHF area.
+
+## 5.3 Group Take
+
+Throughout the semester, this project taught us vital lessons in the use of R code and how to construct a real Data Science Analysis. While it was sometimes tough to find errors and deal with R, we would like to thank the assistants for being there every Wednesday morning to help us out. This course was definitely a pleasure and we shall recommend it to next year's MScM students. 
+
+Many thanks for your attention and we wish you all the best,
+Julian, Charlène & Henri
+

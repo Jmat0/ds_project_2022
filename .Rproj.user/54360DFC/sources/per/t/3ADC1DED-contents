@@ -1,0 +1,588 @@
+```{r, echo = FALSE, message = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+# 4. Analysis
+
+### Question 1
+
+**How are the thresholds of Air Pollution respected in NYC? In what Proportion?**
+
+To answer this question, we have chosen one main threshold of PM2.5 levels given by the USEPA (United States Environmental Protection Agency). This institution has two levels of air pollution to respect : Primary & Secondary. The former is a more strict measure chosen to protect asthmatic people, children & the elderly, while the latter is a general guide providing a safe quality of air for the average Joe. More precisely, these two levels are respectively 12 & 15 mcg/m^3 (micrograms per cubic meter of air). We also decided to compare these American levels with other institutions tracking Air Pollution and found the WHO (World Health Organization) has a far stricter threshold of 5 mcg/m^3.
+
+To calculate the proportion in which these levels are respected or not, we divide the observations by the tresholds and multiply them by 100. This indicates the percentage of drawdown or extension from the respective levels of Air Pollution.
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+# Analysis Question 1 : Add columns of USEPA & WHO PM2.5 thresholds.
+dfpm2.5_index <- dfpm2.5 %>%
+  mutate(dfpm2.5,"USEPA_Primary %" = ((Mean.mcg.m3 / 12)-1)*100, "USEPA_Secondary %" = ((Mean.mcg.m3 / 15)-1)*100, "WHO %" = ((Mean.mcg.m3 / 5)-1)*100)
+
+uhfpm_index <- merge(UHFmap, dfpm2.5_index, by = "UHFCODE", duplicateGeoms = TRUE)
+```
+
+The following visualisation shows us the evolution of Air Pollution in regards to the Primary USEPA level(12mcg/m^3), from 2010 to 2021. Ideally, we would like all areas to be green. Anything yellow or orange means the UHF area in question is not respecting the Primary USEPA Air Pollution level. In 2010, we can see that almost all UHF areas are green except for the center of Manhattan. Although is started badly, the same areas air quality respected the levels as of 2015. This means, that until 2015, it wasn't considered safe to breath the air of Midtown Manhattan if you were asthmatic, a child or an elderly person. In 2021, all UHF areas show a drawdown from 12 mcg/m^3, meaning the air of the entire city of New York is now safe to breath.
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+## USEPA PRIMARY GUIDELINES
+tm_shape(uhfpm_index) +
+  tm_polygons(
+    col = "USEPA_Primary %",
+    n=10,
+    palette ="-RdYlGn")+
+  tm_facets(by = "Time", ncol = 3) +
+  tm_layout(legend.outside.size = 0.2)
+```
+
+The following visualisation shows us how the UHF areas respect the Secondary USEPA level : 15mcg/m^3. Between 2010 and 2021, all the boroughs respected this level and are considered safe for the average life form. However, certain areas came very close to this level, and we decided to use darker red colours to illustrate this. For example, the UHF areas which overshot the Primary USEPA level, were only 5% below this secondary USEPA level, almost making them dangerous for all humans in the area. This is quite alarming given the importance and popularity of this part of the city. As expected after the previous illustration, all UHF areas are now safe in regards to the Secondary USEPA level.
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+## USEPA SECONDARY GUIDELINES
+tm_shape(uhfpm_index) +
+  tm_polygons(
+    col = "USEPA_Secondary %",
+    n=10,
+    palette ="-RdYlGn")+
+  tm_facets(by = "Time", ncol = 3) +
+  tm_layout(legend.outside.size = 0.2)
+```
+
+The below visualisation shows in what percentage the NYC air pollution levels extended past WHO guidelines. Given that NYC barely respected the Primary USEPA levels, it's quite obvious there will be struggle with this far stricter measure : 5mcg/m^3. Straight away, we see that not a single UHF area since 2010 respects the WHO guidelines. In 2010, the center of Manhattan recorded air pollution levels almost three times greater than what would have been necessary to be considered safe in the eyes of the WHO. Throughout the 2010s, we see slow improvements. In 2020, we see that there are important parts of Staten Island, Brooklyn and the Bronx which were in line with the WHO and this is certainly due to COVID-lockdowns having halted flights and many forms of emission-creating transport.
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+## WHO GUIDELINES 
+tm_shape(uhfpm_index) +
+  tm_polygons(
+    col = "WHO %",
+    breaks = c(0,20,40,60, 80, 100, 120, 140, 160, 180, 200),
+    palette ="-RdYlGn")+
+  tm_facets(by = "Time", ncol = 3) +
+  tm_layout(legend.outside.size = 0.2)
+```
+
+Now, we would like to compare the evolution of PM2.5 levels across the five boroughs and use visualisations which may speak to us more. To begin, we gather all the necessary data and calculate the AveragePM2.5 level per year, per borough. To do this, we calculate the mean of all UHF areas in their respective Boroughs. We do this for every borough, merge all the data together into one table, of which we've illustrated the first ten lines below.
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+MeanPM2.5_Bronx <- dplyr::select(dfpm2.5, UHFCODE, Mean.mcg.m3, Time) %>% 
+  filter(UHFCODE %in% c(101:107) & Time %in% c(2010:2021)) %>%
+  group_by(Time) %>%
+  summarise("Bronx" = mean(Mean.mcg.m3[Time %in% c(2010:2021)]))
+
+MeanPM2.5_Brooklyn <- dplyr::select(dfpm2.5, UHFCODE, Mean.mcg.m3, Time) %>% 
+  filter(UHFCODE %in% c(201:211) & Time %in% c(2010:2021)) %>%
+  group_by(Time) %>%
+  summarise("Brooklyn" = mean(Mean.mcg.m3[Time %in% c(2010:2021)]))
+
+MeanPM2.5_Manhattan <- dplyr::select(dfpm2.5, UHFCODE, Mean.mcg.m3, Time) %>% 
+  filter(UHFCODE %in% c(301:310) & Time %in% c(2010:2021)) %>%
+  group_by(Time) %>%
+  summarise("Manhattan" = mean(Mean.mcg.m3[Time %in% c(2010:2021)]))
+
+MeanPM2.5_Queens <- dplyr::select(dfpm2.5, UHFCODE, Mean.mcg.m3, Time) %>% 
+  filter(UHFCODE %in% c(401:410) & Time %in% c(2010:2021)) %>%
+  group_by(Time) %>%
+  summarise("Queens" = mean(Mean.mcg.m3[Time %in% c(2010:2021)]))
+
+MeanPM2.5_StatenIsland <- dplyr::select(dfpm2.5, UHFCODE, Mean.mcg.m3, Time) %>% 
+  filter(UHFCODE %in% c(501:504) & Time %in% c(2010:2021)) %>%
+  group_by(Time) %>%
+  summarise("Staten Island" = mean(Mean.mcg.m3[Time %in% c(2010:2021)]))
+
+MeanPM2.5PerBorough <- merge(merge(merge(merge(MeanPM2.5_Bronx, MeanPM2.5_Brooklyn), MeanPM2.5_Manhattan), MeanPM2.5_Queens), MeanPM2.5_StatenIsland)
+
+# Displaying first 5 rows in a table
+kable((MeanPM2.5PerBorough[1:10,]),"html") %>%
+  kable_styling(full_width = F)
+```
+
+Next, we use the pivot_longer function to facilitate the task of creating our visualisations with *ggplot*. Now, our table uses Time, Borough & Average PM2.5 columns. Below, we see the first ten lines of this table. 
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+MeanPM2.5PerBorough_Longer <- MeanPM2.5PerBorough %>%
+  pivot_longer(c("Bronx", "Brooklyn", "Manhattan", "Queens", "Staten Island"), names_to = "Borough", values_to = "Average PM2.5")
+
+# Displaying first 5 rows in a table
+kable((MeanPM2.5PerBorough_Longer[1:5,]),"html") %>%
+  kable_styling(full_width = F)
+```
+
+These data manipulations help us to better visualize the evolution of PM2.5 across the city. Instead of seeing color evolution on a map, which could lead to inprecise analysis, we have used various charts. First, we have illustrated PM2.5 evolution per borough on a stacked histogram. Here, we see a rather steep decline in PM2.5 levels in the Bronx, Brooklyn and Manhattan. The decrease is a bit slower in Queens & Staten Island, but these areas were less affected by air pollution to begin with.
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+ggplot(MeanPM2.5PerBorough_Longer, aes(fill=Borough, y = `Average PM2.5`, x = Time)) + 
+  geom_bar(position="stack", stat = "identity") +
+  theme(axis.text=element_text(size=15))
+```
+
+In this second visualization, we aim to see which borough has reduced its air pollution levels the most. To calculate this, we simply divide the 2021 PM2.5 figure by the 2010 PM2.5 figure, and convert it to a percentage. Then, we use *ggplot* to plot the PM2.5_Evolution column and represent the values by descending order. The chart shows that Manhattan has had the greatest decrease in air pollution. As shown in previous visualisations, it was the worst in 2010, so this is positive news.
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+MeanPM2.5PerBorough21 <- filter(MeanPM2.5PerBorough_Longer, Time == 2021)
+MeanPN2.5PerBourough10 <- filter(MeanPM2.5PerBorough_Longer, Time == 2010)
+
+PM2.5_Evolution_Since2010 <-MeanPM2.5PerBorough21 %>%
+  mutate("PM2.5_Evolution" = ((`Average PM2.5` / MeanPN2.5PerBourough10$`Average PM2.5`)-1)*100)
+
+PM2.5_Evolution_Since2010
+
+ggplot(data=PM2.5_Evolution_Since2010, aes(x = reorder(Borough, -PM2.5_Evolution), y=PM2.5_Evolution)) +
+  geom_bar(stat="identity", fill="steelblue")+
+  theme_minimal()+
+  xlab("Borough")+ 
+  ylab("PM 2.5 difference")+
+  ggtitle("Difference of PM2.5: 2010 vs 2021 per Borough")+ 
+  theme(plot.title = element_text(color = "black", size = 14, face = "bold"))
+```
+
+In our third and final chart for question 1, we have used the infamous *ggplot pie chart* to gain a better insight into how each borough competes with one another in 2021. For a borough to boast a good position on the PM2.5 leaderboard, they should have the smallest slice of the following pie chart. Overall, the differences between the boroughs are not striking, and this is why we integrated the values into the chart. Thanks to these, we clearly see how Manhattan still has the worst Air Pollution levels, while Staten Island has the lowest.
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+PM2.5_Evolution_Since2010 <- PM2.5_Evolution_Since2010 %>% 
+  arrange(desc(Borough)) %>%
+  mutate(prop = PM2.5_Evolution_Since2010$`Average PM2.5` / sum(PM2.5_Evolution_Since2010$`Average PM2.5`) *100) %>%
+  mutate(ypos = cumsum(prop)- 0.5*prop )
+
+PM2.5_Evolution_Since2010$`Average PM2.5`<- 
+  as.character(round(PM2.5_Evolution_Since2010$`Average PM2.5`, 2))
+
+ggplot(PM2.5_Evolution_Since2010, aes(x="", y=prop, fill=Borough))+
+  geom_bar(stat = "identity", width = 10)+
+  coord_polar("y", start=0) +
+  theme_void() + 
+  #theme(legend.position="none") +
+  geom_text(aes(y = ypos, label = PM2.5_Evolution_Since2010$`Average PM2.5`), color = "white", size=4) +
+  scale_fill_brewer(palette="Set1") 
+```
+
+In conclusion, the analysis of PM2.5 levels between 2010 and 2021 has clearly shown us great improvements in air quality. While the situation did not get off to a great start in busier UHF areas of Midtown Manhattan, the entire city is now under both USEPA thresholds for safe air pollution levels. However, depending on which Air Quality guideline you choose, USEPA or WHO, the story is not the same.
+
+
+### Question 2
+
+**What are the main characteristics of an area contributing to Air Pollution? Do the Boroughs have distinct characteristics?**
+
+For question 2, we shall use our **Factors** table to determine what drives Air Pollution in UHF areas. Our hypothesis is that the three main predictors of Air Pollution levels are : Vegetative cover, Traffic density & Population density. We think Vegetative Percent will be negatively correlated with other variables linked to the use of city space, such as traffic density needing more space for roads instead of green areas, or high population density forcing construction of habitable buildings instead of parks. We expect Traffic density to contribute directly to Air Pollution through emissions. In a similar way, Population density should play an important role as the more people are present in an area, the more the activity is concentrated in a given space.
+
+In order to check our hypotheses and intuitions, we will start our analysis by plotting the relationships between the factors. From Factors, we must remove the Geography column as it is characters, and we remove PM2.5 as well. We use the *corrplot* package to run our correlation tables. Our first table shows us circles, varying positively in size when the correlation is greater. We can also directly demonstrate the correlation in values, as you can see in the second correlation matrix. First, we can observe Vegetative Percent has a strong negative relation with all other variables. Secondly, Bicycle percent has a positive relationship with all factors except vegetative cover. 
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+# Analysis of Factors without PM2.5
+# Load corrplot package to run matrix of correlation
+library(corrplot)
+
+# We need to remove geography column as it is chr, and we remove PM2.5 as well
+# Visualization
+corrplot(cor(Factors[,-c(1,2)]), order = 'FPC', type = 'lower', diag = FALSE)
+
+# With numerical values
+corrplot(cor(Factors[,-c(1,2)]), order = 'FPC', method = 'number', type = 'lower', diag = FALSE, number.cex=0.75)
+```
+
+We create a dataframe to link factors with PM2.5 values from 2017 as a reference point. We rename the GeoID column to UHFCODE and remove the Geography column.
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+# Create dataframe to link factors with pm2.5 values for 2017 as reference point
+# start by renaming GeoID from factors to UHFCODE
+colnames(Factors)[1] = "UHFCODE"
+testpm2017 <- filter(dfpm2.5, Time == 2017)
+head(testpm2017)
+pm2017 <- dplyr::select(testpm2017,UHFCODE,Mean.mcg.m3)
+testFactors_and_PM <- merge(pm2017,Factors, by='UHFCODE')
+
+# Remove Geography column
+Factors_and_PM <- testFactors_and_PM[,-3]
+```
+
+In the following charts, we will use *ggplot* to demonstrate the behaviour between our main variables against PM2.5 levels.
+
+For our first graph, we look at the link between air pollution and population density. We see that, the more crowded a UHF area is, the more pollution it has. The Rsquared of this regression is 36% and the variable is significant at the 5% Alpha level.
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+# PM2.5 against Pop Density
+# Plot
+ggplot(Factors_and_PM,aes(x=Popdensity, y=Mean.mcg.m3)) +
+  labs(title = "The more crowded an UHF is, the more pollution it has", x =
+         "Population Density (KM2)", y = "Mean PM2.5") +
+  stat_summary(fun.Factors_and_PM=mean_cl_normal) + 
+  geom_smooth(method='lm')
+
+# Regression table
+# We install the jtools package
+library(jtools)
+# create variable for linear regression
+fit <- lm(Factors_and_PM$Mean.mcg.m3 ~ Factors_and_PM$Popdensity)
+# show table
+summ(fit,model.info= FALSE)
+```
+
+Let's explore the link between traffic density and pollution levels. On the following graph, we can see how more traffic is correlated with a higher PM2.5 level. The Rsquared is slightly higher in this case, 53% and still very significant at Alpha = 5%. 
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+# PM2.5 against Traffic Density
+# Plot
+ggplot(Factors_and_PM,aes(x=TrafDensity, y=Mean.mcg.m3)) +
+  labs(title = "More traffic is also equivalent to increased levels in air pollution", x =
+         "Traffic Density", y = "Mean PM2.5") +
+  stat_summary(fun.Factors_and_PM=mean_cl_normal) + 
+  geom_smooth(method='lm')
+
+# Regression Table
+fittrafdensity <- lm(Factors_and_PM$Mean.mcg.m3 ~ Factors_and_PM$TrafDensity)
+summ(fittrafdensity,model.info= FALSE)
+```
+
+On this final graph, we look at the relationship between Vegetative Percent and air pollution. We see a strong negative relationship visually. An RSquared of 51% proves this and the variable is significant. 
+
+```{r, echo = TRUE, message=FALSE,warning=FALSE, paged.print=FALSE}
+# PM2.5 against Vegetative Coverage
+ggplot(Factors_and_PM,aes(x=VegePercent, y=Mean.mcg.m3)) +
+  labs(title = "Greener areas tend to be less polluted", x =
+         "Vegetative P%", y = "Mean PM2.5") +
+  stat_summary(fun.Factors_and_PM=mean_cl_normal) + 
+  geom_smooth(method='lm')
+
+fitvegepercent <- lm(Factors_and_PM$Mean.mcg.m3 ~ Factors_and_PM$VegePercent)
+
+summ(fitvegepercent,model.info= FALSE)
+```
+
+
+Now that we have confirmed some of our intuitions we are going to see which variables are the most significant for our model. To do so, we will use a backward stepwise regression. We start by defining our model with all factor variables, and we eliminate the one with the less explanatory power. 
+
+However, as we've seen in the correlation matrix, there seems to be variables with rather high correlations. For example, neighborhood poverty percent and Median Income are strongly correlated with each other. Therefore, we shall start by checking our variables for multicollinearity. To do so, we first create a model with all the factors and use the *vif()* function.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+modelfactors <- lm(Mean.mcg.m3 ~ VegePercent + WalkSubDist + BicPercent + NeighPercent + SubDensity + TrafDensity + MedianIncome + Popdensity, data = Factors_and_PM)
+
+library(car)
+
+#create vector of VIF values
+VIFvalues <- vif(modelfactors)
+
+#create horizontal bar chart to display each VIF value
+barplot(VIFvalues, main = "VIF Values", las=1, cex.names=0.55, horiz = TRUE, col = "steelblue")
+
+#add vertical line at 5 as after 5 there is severe correlation
+abline(v = 5, lwd = 3, lty = 2)
+
+#summ(modelfactors)
+#export_summs(modelfactors)
+
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+
+tab_model(modelfactors, title = "Linear regression of PM2.5 against all factors")
+```
+
+As we can see on this first VIF Values chart, we have high chances of multicollinearity with the Median Income variable, as its value is greater than 5. Therefore, we choose to remove it from our model.
+
+We conduct the same VIF test as prior.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+modelfactors2 <- lm(Mean.mcg.m3 ~ VegePercent + WalkSubDist + BicPercent + NeighPercent + SubDensity + TrafDensity + Popdensity, data= Factors_and_PM)
+
+library(car)
+
+#create vector of VIF values
+VIFvalues2 <- vif(modelfactors2)
+
+barplot(VIFvalues2, main = "VIF Values", horiz = TRUE, col = "steelblue", cex.names = 0.55, las=1) #create horizontal bar chart to display each VIF value
+
+abline(v = 5, lwd = 3, lty = 2)  #add vertical line at 5 as after 5 there is severe correlation
+```
+
+
+Now, all our variables have VIF coefficients below 5. However, BicyclePercent's VIF is close to 5. We still decide to keep it for our research. 
+
+We shall now apply backward integration on the remaining variables, in order to see which ones are the most relevant.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# We do a backward regression
+library(MASS)
+backward.model <- step(modelfactors2, direction = "backward",trace=0)
+```
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+finalmodel <- lm(Mean.mcg.m3 ~ VegePercent +  SubDensity + TrafDensity, data = Factors_and_PM)
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+
+tab_model(finalmodel, title = "Final model")
+```
+
+
+We see that the variables which have been kept are Vegetative Percent, Subway density & Traffic density. Our intuitions were correct, apart from Population density being replaced by Subway density.
+
+We can analyze the residuals of our model, and see whether or not they respect the 3 following assumptions: 
+1) they follow a Normal distribution 
+2) they are statistically independent from one another
+3) They have equal variances when compared to each values of our sample
+
+We start by plotting the residuals, but it is hard to tell if they are normally distributed.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# We start with a plot
+hist(backward.model$residuals, main= "Histogram of Residuals", xlab = "Residuals of backward model")
+```
+
+We check this with a qqplot from the *car* package, and they appear to follow a normal distribution.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Creating the qqplot
+qqPlot(backward.model$residuals, distribution = "norm")
+```
+
+Finally, we can do a Jarque-Bera test to confirm this, thanks to the *tseries* package. As the p-value is 0.4, we cannot reject our null hypothesis and we confirm that it is likely following a normal distribution.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(tseries)
+jbtmodel <- jarque.bera.test(backward.model$residuals)
+```
+
+Next, we plot our fitted values against our residuals. The residuals don't seem to follow a particular pattern and shows that they might not be correlated between each other.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+plot(backward.model$fitted.values, backward.model$residuals, xlab="Fitted values", ylab="Residuals")
+```
+
+We conduct the ANOVA test. We do not reject the hypothesis that Neighborhood Poverty in % has a different mean than the other variable. It appears that all the variables have different variances.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Anova test
+anovamodel <- anova(backward.model)
+```
+
+We run our last VIF test for our new model and we see that all the values are quite low.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# We do not reject the hypothesis that Neighborhood % has a different mean than the other variable
+VIFnewmodel <- vif(backward.model)
+
+barplot(VIFnewmodel, main = "VIF Values", horiz = TRUE, col = "steelblue", cex.names = 0.55, las=1) #create horizontal bar chart to display each VIF value
+
+abline(v = 5, lwd = 3, lty = 2)  #add vertical line at 5 as after 5 there is severe correlation
+```
+
+Now that we know which variables from our factors are the most predictive of air pollution levels, we can analyse the influence on the various UHF areas. First of all, we thought to check if the characteristics of each borough are distinguishable with each other, or if they can be considered homogeneous. To do so, we start by clustering all the UHF areas with all their characteristics. 
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# CLustering
+Factors_and_PM$UHFCODE <- as.character(Factors_and_PM$UHFCODE)
+
+distmat <- dist(Factors_and_PM[,-1], method="euclidean", diag=TRUE,upper=TRUE)
+coclust <- hclust(distmat, method="complete") 
+plot(coclust, labels=Factors_and_PM[,1]) 
+rect.hclust(coclust, k=5, border="red")
+```
+
+By using the euclidean method for our distance matrix, we return the above dendogram for five clusters. As we can see, it's hard to establish a signifcant difference between the boroughs. If it were the case, each cluster would have values starting with the same number. We can see some resemblance between clusters : in the first cluster there are four values from the Bronx, and four values of Manhattan in the last. Other than these two, they are still quite mixed. It is interesting to point out how UHF 310 (Union Square - Lower Manhattan) is alone in the fourth cluster. 
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+data2.sc <- scale(Factors_and_PM[,-1]) 
+row.names(data2.sc) <- Factors_and_PM[,1]
+
+# Load factorextra() library
+library(factoextra)
+fviz_nbclust(data2.sc, kmeans, method="wss")
+```
+
+Using the elbow method, we determine an optimal number of clusters. Here, as the rate decline slows drastically at 3 clusters, we choose this value. 
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+ct3 <- cutree(coclust, k=3) 
+plot(coclust, labels=Factors_and_PM[,1]) 
+rect.hclust(coclust, k=3, border="red")
+```
+
+However, when plotting the three clusters, the results are not convincing. We can now conclude there are no significant differences between the UHF areas. To further this, we create three visualizations for each of our three variables. They show us that the UHF values are quite similar, but they are still rather mixed. The clear differences are in the extremes, for example between Staten Island & Manhattan.
+
+We can see this trend more clearly by plotting our variables with each boroughs. For Vegetative cover, we see that some values related to Manhattan or Brooklyn are somewhat close together. However, they also blend with other UHF codes from other Boroughs.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Using ggrepel to see visually the boroughs
+# Creating dataframe: UHF CODE with Borough
+
+UHFCODE <- c(c(101:107),c(201:211),c(301:310),c(401:410),c(501:504))
+
+Bronx <- "Bronx"
+Brooklyn <- "Brooklyn"
+Manhattan <- "Manhattan"
+Queens <- "Queens"
+StatenIsland <- "Staten Island"
+
+Borough <- c(rep(Bronx,7),rep(Brooklyn,11),rep(Manhattan,10),rep(Queens,10),rep(StatenIsland,4))
+
+UHF_Borough <- cbind(UHFCODE,Borough)
+UHF_Borough <- as.data.frame(UHF_Borough)
+UHF_Borough$UHFCODE <- as.character(UHF_Borough$UHFCODE)
+
+Factors <- (list(dfvegetative_cover[,-1],dfwalk_dist_subway[,c(2,4)],dfbicycle_network[,c(2,4)],dfNeighborhood_Poverty[,c(1,3)], dfsubway_density[,c(2,4)], dftraffic_density[,c(2,4)],dfincome[,c(1,2)],dfpop_density[,c(1,4)]) %>% reduce(inner_join, by='GeoID'))
+
+Factors_and_PM2 <- Factors_and_PM %>% 
+  left_join(UHF_Borough, by="UHFCODE")
+
+# Graphical representation with Vegetative Percent
+ggplot(Factors_and_PM2, aes(VegePercent,Mean.mcg.m3 )) +
+  geom_point(aes(color = Borough)) +
+  geom_point(size = 3, shape = 1, data = Factors_and_PM2) 
+```
+
+In the following graph, we can see how the extrem can more easily be separated. The values for manhattan reagrding traffic density, are way higher than those of the other boroughs.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Traffic Density
+ggplot(Factors_and_PM2, aes(TrafDensity,Mean.mcg.m3 )) +
+  geom_point(aes(color = Borough)) +
+  geom_point(size = 3, shape = 1, data = Factors_and_PM2)
+```
+
+The same trend can be observed when plotting for subway density.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Subway Density
+ggplot(Factors_and_PM2, aes(SubDensity,Mean.mcg.m3 )) +
+  geom_point(aes(color = Borough)) +
+  geom_point(size = 3, shape = 1, data = Factors_and_PM2)
+```
+
+To sum up, we can conclude that the three most important predictive variables for PM2.5 air pollution are Vegetative Percent, Traffic density & Subway density. Through manipulation of model choice and various statistical techniques, we've also found that there are no significant differences between the boroughs in regards to all their characteristics.
+
+### Question 3
+
+**Are there disparities in levels of Air Pollution between wealthier and poorer areas?**
+
+As New York City has its fair share of socio-economic inequalities, we wanted to analyse if less fortunate UHF areas have worse levels of Air Pollution, and if richer UHF areas are better off in regards to breathable air quality. For this, we have created three groups of Median Income to segment the areas: Low($28'300 to $79'500), Medium($79'500 to $131'000) & High($131'000 to $182'000).
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Groups income into 3 levels
+
+interval_income <- cut_interval(Factors_and_PM$MedianIncome,3)
+test <- table(Factors_and_PM$UHFCODE, interval_income)
+
+Factors_and_PM_Income_Level <- Factors_and_PM %>%
+  mutate(cut_interval(Factors_and_PM$MedianIncome,3)) 
+
+colnames(Factors_and_PM_Income_Level)[11] = "Category"
+Factors_and_PM_Income_Level$Category <- as.character(Factors_and_PM_Income_Level$Category)
+
+Factors_and_PM_Income_Level[Factors_and_PM_Income_Level == "[2.83e+04,7.95e+04]"] <- "Low"
+Factors_and_PM_Income_Level[Factors_and_PM_Income_Level == "(7.95e+04,1.31e+05]"] <- "Medium"
+Factors_and_PM_Income_Level[Factors_and_PM_Income_Level == "(1.31e+05,1.82e+05]"] <- "High"
+```
+
+We can see that the UHF areas belonging to the Low Income group have the lowest level of median PM2.5 air pollution level. The dispersion in the Medium Income group is rather stretched, meaning the UHF areas have varying levels of air pollution levels and many values in the upper quartile. The high income group has the highest median level of air pollution with a squeezed dispersion, showing us the data is more homogeneous.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# Boxplot 
+ggplot(data=Factors_and_PM_Income_Level, mapping=aes(x= Category, y=Mean.mcg.m3))+
+  geom_boxplot()+ggtitle("Relationship between income groups & PM2.5 levels")
+```
+
+The violon boxplot below gives us a better indication on the income dispersion.
+
+```{r, echo = TRUE, fig.width= 10, fig.height=11, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(ggplot2)
+library(dplyr)
+library(hrbrthemes)
+library(viridis)
+
+ggplot(Factors_and_PM_Income_Level, aes(x=Category, y=Mean.mcg.m3, fill=Category)) +
+    geom_violin(width=1.5) +
+    geom_boxplot(width=0.2, color="grey", alpha=0.2) +
+    scale_fill_viridis(discrete = TRUE) +
+    theme_ipsum() +
+    theme(text = element_text(size=20),
+      legend.position="none",
+      plot.title = element_text(size=15)
+    ) +
+    ggtitle("Relationship between income groups & PM2.5 levels") +
+    xlab("")
+```
+
+Next, we compare Neighborhood Poverty percent and median income against average PM2.5 levels
+
+For Neighborhood Poverty, there is great dispersion in the observations. Indeed, the nature of this variable creates difficulty to interpret the graph. The fact that a given UHF area has a low poverty rate, does not necessarily imply that it can be considered to have a financial advantage. Therefore, we choose to focus more on the Median Income levels to answer our research question. We can see a clear upward trend showing that richer areas tend to be more polluted than the others.
+
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+#Compare poverty variable & other variables
+Factors_and_PM_Income_Level %>%
+  filter(NeighPercent >= 5, NeighPercent <= 39) %>%
+  ggplot(aes(NeighPercent, Mean.mcg.m3)) +
+    geom_point() + geom_smooth()
+ 
+Factors_and_PM_Income_Level %>%
+  filter(MedianIncome >=2.83e+04 , MedianIncome <=1.82e+05) %>%
+  ggplot(aes(MedianIncome, Mean.mcg.m3)) +
+    geom_point() + geom_smooth()
+```
+
+By filtering our UHF's based on their income, we wanted to compare the richest UHF (305: Union Square - Lower Manhattan) with the poorest (107: South Bronx). By using our common factors, we can display their main differences.
+
+On the graph below, we used all of our variables. However, even by applying a logarithmic transformation, the highs values of median income and population density were making it hard to compare the other factors. We can note that these 2 factors are higher for Union Square.
+
+
+
+```{r, echo = TRUE, fig.width= 10, fig.height=11, message=FALSE, warning=FALSE, paged.print=FALSE}
+options(scipen=999)
+
+Factors_and_PM$UHFCODE <- as.character(Factors_and_PM$UHFCODE)
+new <- filter(Factors_and_PM,UHFCODE %in% c("107","305")) 
+
+new2 <- new[,-11]
+
+new_longer <- new2 %>%
+  pivot_longer(c("Mean.mcg.m3","VegePercent", "WalkSubDist", "BicPercent", "NeighPercent", "SubDensity","TrafDensity","MedianIncome","Popdensity"), names_to = "Borough", values_to = "Values")
+
+new_longer %>%
+   ggplot(aes(x = Borough, y=Values, col = UHFCODE, group = UHFCODE)) +
+   geom_line() + scale_y_log10()+geom_point()+
+  ggtitle(label = "Comparison of richest vs poorest UHF area") +
+  theme(axis.text=element_text(size=9))
+```
+
+By removing Median income and population density we get the following graph:
+
+```{r, echo = TRUE, fig.width= 10, fig.height=11, message=FALSE, warning=FALSE, paged.print=FALSE}
+options(scipen=999)
+
+Factors_and_PM_Income_Level$UHFCODE <- as.character(Factors_and_PM_Income_Level$UHFCODE)
+
+new <- filter(Factors_and_PM_Income_Level,UHFCODE %in% c("107","305")) 
+
+new2 <- new[,-11]
+
+new_longer <- new2 %>%
+  pivot_longer(c("Mean.mcg.m3","VegePercent", "WalkSubDist", "BicPercent","TrafDensity", "SubDensity"), names_to = "Borough", values_to = "Values")
+
+new_longer %>%
+   ggplot(aes(x = Borough, y=Values, col = UHFCODE, group = UHFCODE)) +
+   geom_line() + geom_point()+
+  ggtitle(label = "Comparison of richest vs poorest UHF area") +
+  theme(axis.text=element_text(size=9))
+```
+We can see more clearly that Union Square has a much higher traffic density than South Bronx. It also has a more prominent Bicycle network. The amount of PM2.5 is marginally higher in Union Square, but the difference is not significant.
+
+By plotting the trends of PM2.5 over the past decade, we find that in 2010, the disparity between the air quality of the richest and poorest UHF areas was greater, but by 2021, the gap had narrowed considerably. Hence, it can be concluded that living in a high or low socioeconomic area today, will not drastically affect the quality of breathable air.
+
+```{r, echo = TRUE, fig.width= 10, fig.height=11, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(purrr)
+library(ggplot2)
+library(gganimate)
+
+richandpoor <-dfpm2.5 %>%
+  dplyr::filter(dfpm2.5$UHFCODE %in% c(107,305))
+
+richandpoor$UHFCODE <- as.character(richandpoor$UHFCODE)
+
+richandpoor%>%
+  ggplot(aes(x=Time, y=Mean.mcg.m3,group=UHFCODE, color = UHFCODE)) +
+    geom_line() +
+    geom_point() +
+    ggtitle("Comparison of Pm2.5 evolution for the richest vs poorest UHF (2010-2021)")  +
+    ylab("Mean mcg m3") + xlab("Time")+
+    transition_reveal(Time)
+```
+
+

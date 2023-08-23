@@ -1,0 +1,31 @@
+```{r, echo = FALSE, message = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+# 1. Introduction
+
+### 1.1 Overview and motivation
+
+The phenomenon of urbanization has intensified for more than a century and has led to the development of gigantic cities around the world. While this development boosts economic activity, the concentration of human activity can lead to harsher living conditions for those affected, through to the spread of air pollution. Across the pond, New York City has grown dramatically in both height and width. Following discoveries on Air Pollution, respecting the environment has become more important for New Yorkers as in 2021, New York State has enshrined the right to a healthy environment in its Constitution. To follow this, the City has been tracking air pollution parameters in all five boroughs (Manhattan, the Bronx, Brooklyn, Queens and Staten Island). By digging into all the data available on NYC (<https://opendata.cityofnewyork.us>), we were intrigued to see how air pollution levels can vary across the different boroughs. This data leads us to ponder the subject of how thresholds of air pollution are respected across the city as well as how inequalities in air pollution are treated.
+
+### 1.2 Related work
+
+Here are articles that motivated our research:
+
+-   <https://rmi.org/new-york-emits-more-building-air-pollution-than-any-other-state/>
+-   <https://www.ny1.com/nyc/all-boroughs/news/2022/04/21/new-york-city-now-has-four-superfund-sites--where-are-they->
+-   <https://www.nytimes.com/2022/03/09/climate/redlining-racism-air-pollution.html>
+-   <https://www.nytimes.com/2022/09/12/nyregion/nyc-congestion-pricing-manhattan-bronx.html>
+-   <https://www.lemonde.fr/planete/article/2021/11/04/l-etat-de-new-york-inscrit-le-droit-a-un-environnement-sain-dans-sa-constitution_6100919_3244.html>
+
+### 1.3 Project objectives
+
+The goal of this research is to assess levels of air pollution in New York City in regards to respective thresholds, given by the United States Environmental Protection Agency EPA (<https://www.epa.gov/pm-pollution/national-ambient-air-quality-standards-naaqs-pm>) & the WHO, isolate the main drivers of air pollution, and finally investigate the disparities according to socio-economic factors.
+
+At first, we will investigate the air pollution levels in each UHF area of New York City over the past 11 years, to see whether the pollution standards are being met. We will then calculate the correlation between air pollution and certain characteristics of the areas (population density, density of green spaces, access to public transportation, etc.). Furthermore, since NYC has considerable socioeconomic inequalities, we will consider the financial status of the boroughs' inhabitants to observe if those with greater financial resources are in a better position regarding air quality.
+
+### 1.4 Research questions
+
+1.  **How are the thresholds of Air Pollution respected in NYC? In what Proportion?**
+2.  **What are the main characteristics of an area contributing to Air Pollution? Do the Boroughs have distinct characteristics?**
+3.  **Are there disparities in levels of Air Pollution between wealthier and poorer areas?**

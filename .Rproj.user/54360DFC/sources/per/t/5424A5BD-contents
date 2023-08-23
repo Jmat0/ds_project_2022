@@ -1,0 +1,557 @@
+```{r, echo = FALSE, message = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+# 2. Data
+
+-   Sources
+-   Description
+-   Wrangling/cleaning
+-   Spotting mistakes and missing data
+
+
+### 2.1 Data source
+
+We decided to use the United Hospital Fund Neighborhoods 42 (UHF42) geographical segmentation to study our zone of interest, New York City. United Hospital Fund (UHF) 42 New York City Segmentation is a geographic and socioeconomic segmentation of New York City developed by UHF in 2019. This segmentation divides the city into 42 distinct clusters of neighborhoods based on their unique demographic characteristics. The segmentation uses a combination of data from the U.S. Census Bureau, the Department of City Planning, and other public sources to create a comprehensive view of New York City neighborhoods. The segmentation is used to help hospitals, health care providers, and other stakeholders better understand the needs of the communities they serve and improve health care delivery. 
+
+The data sets belong to : air quality, common factors of pollution and socio-demographic factors. The New York open data portal provided us with the necessary data for the first two themes. For the third, the income data comes from "Name Census : US Demographic data" and the population figures from the "Prison Police initiative" website (<https://www.prisonpolicy.org/origin/ny/uhf_districts.html>). 
+
+Below is a look at our data sets and their main variables.
+
+### 2.2 Data description
+
+#### 2.2.1 Air Quality
+
+-   **Fine Particulate Matter (PM2.5)**: Air samples collected at specific NYCCAS monitoring sites along with information about emissions sources were incorporated into a statistical model that predicted pollutant concentrations at all locations in NYC for the specified time period. In NYC, fine particulate matter is measured in units of micrograms per cubic metre of air.
+
+-   Time: Time period of Air samples collection.
+
+-   GeoID: Numeric code of geographic area.
+
+-   GeoType: Geography type. There are several methods of delimitation of the geographical area. The most used are UHF42, UHF34, CD and Borough.
+
+-   GeoRank: Geography Rank.
+
+-   Geography: Name of the geography area according to their GeoType.
+
+-   Mean mcg per cubic metre: The results were then assigned to the appropriate NYC neighbourhood and averaged
+
+-   0th Percentile, mcg per cubic metre : The results were then assigned to the appropriate NYC neighbourhood and the 10th percentile identified.
+
+-   90th Percentile, mcg per cubic metre : The results were then assigned to the appropriate NYC neighbourhood and the 90th percentile identified.
+
+(data source:<https://a816-dohbesp.nyc.gov/IndicatorPublic/beta/data-explorer/air-quality/?id=2023#display=summary>)
+
+#### 2.2.2 Common factors
+
+As opposed to the PM2.5 data, we don't have continuous data for every year for our common factors. We felt they are still relevant for our analysis as these values do not tend to change drastically from one year to another, especially in such a developed city such as New York. For example, subway density variations are quite rare as the space for public transport is extremely congested and there are close to zero opportunities to build new subway stops. Similarly, vegetative cover will not change in a significant way as they city's parks have been established for years. Later in the analysis, we will be using the year 2017 as a reference point.
+
+-   **Vegetative Cover**: Vegetative cover (2017) is the land covered by trees, grass, or other plants. This area is not covered by a hard surface such as paved roads, sidewalks, or buildings. Vegetative cover tends to reduce temperatures in the immediate area and may increase air quality. 
+
+-   Time: Time period.
+
+-   GeoID: Numeric code of geographic area.
+
+-   GeoType: Geography type. There are several methods of delimitation of the geographical area. The most used are UHF42, UHF34, CD and Borough.
+
+-   GeoRank: Geography Rank.
+
+-   Geography: Name of the geography area according to their GeoType.
+
+-   Percent: Percentage of vegetative cover
+
+(data source: <https://a816-dohbesp.nyc.gov/IndicatorPublic/VisualizationData.aspx?id=2143,719b87,107,Summarize>)
+
+-   **Walking distance to a subway station** : The percentage of population within a quarter-mile of a subway station entrance. When more people have convenient access to the transit system, they're more likely to use it. Subway access encourages active transportation, which improves the health of residents. This data is for 2018.
+
+-   Time: Time period.
+
+-   GeoID: Numeric code of geographic area.
+
+-   GeoType: Geography type. There are several methods of delimitation of the geographical area. The most used are UHF42, UHF34, CD and Borough.
+
+-   GeoRank: Geography Rank.
+
+-   Geography: Name of the geography area according to their GeoType.
+
+-   Percent: Census block populations within areas defined as walking distance were summed across the neighborhood and divided by total neighborhood population.
+
+(data source: <https://a816-dohbesp.nyc.gov/IndicatorPublic/VisualizationData.aspx?id=2391,719b87,104,Summarize>)
+
+-   **Subway density**: Neighborhoods with greater subway access encourage active transportation. This data is for 2014.
+
+-   Time: Time period.
+
+-   GeoID: Numeric code of geographic area.
+
+-   GeoType: Geography type. There are several methods of delimitation of the geographical area. The most used are UHF42, UHF34, CD and Borough.
+
+-   GeoRank: Geography Rank.
+
+-   Geography: Name of the geography area according to their GeoType.
+
+-   Density: The count of MTA subways stations as of 2012 divided by the total land area in km2 of the UHF neighborhood.
+
+(data source: <https://a816-dohbesp.nyc.gov/IndicatorPublic/VisualizationData.aspx?id=2158,719b87,104,Summarize>)
+
+-   **Bicycle network**: Percent of Streets with Bicycle Lanes. This data is from 2017.
+
+-   Time: Time period.
+
+-   GeoID: Numeric code of geographic area.
+
+-   GeoType: Geography type. There are several different methods of delimitation of the geographical area. The most used are UHF42, UHF34, CD and Borough.
+
+-   GeoRank: Geography Rank.
+
+-   Geography: Name of the geography area according to their GeoType.
+
+-   Percent: ratio of streets with bicycle area against streets without bicycle area.
+
+(data source: <https://a816-dohbesp.nyc.gov/IndicatorPublic/VisualizationData.aspx?id=2390,719b87,104,Summarize>)
+
+-   **Traffic density**: A measure of the average number of vehicles that occupy a specified area. Traffic density can influence health as a source of air pollution. This data is from 2016.
+
+-   Time: Time period.
+
+-   GeoID: Numeric code of geographic area.
+
+-   GeoType: Geography type. There are several methods of delimitation of the geographical area. The most used are UHF42, UHF34, CD and Borough.
+
+-   GeoRank: Geography Rank.
+
+-   Geography: Name of the geography area according to their GeoType.
+
+-   Million miles (per km2): Vehicle-miles are expressed in millions per square kilometer.
+
+(data source: <https://a816-dohbesp.nyc.gov/IndicatorPublic/VisualizationData.aspx?id=2112,719b87,114,Summarize>)
+
+#### 2.2.3 Socio-demographics factors
+
+-   **Income per capita**: This data set provides information about the median household income in New York City by UHF area. These incomes levels are for 2022.
+
+-   GeoID: Numeric code of the UHFgeographic area.
+
+-   MedianIncome : Median Household Income of given UHF area.
+
+(data source: <a href="https://namecensus.com/demographics/new-york/10001/">10001 Zip Code Income, Population and Demographics</a>)
+
+-   **Population Density**: This data set provides us with the population per square in mile in New York City.
+
+-   GeoID: Numeric code of geographic area.
+
+-   Popcount : Population count
+
+-   Km2: Size of area in square kilometers.
+
+-   Popdensity: Result of Popcount/Km2 for a given area.
+
+(data source: <https://www.prisonpolicy.org/origin/ny/uhf_districts.html>)
+
+-   **Neighborhood poverty**: The percent of households with incomes below the federal poverty level. This data is an average of the annual values between 2015 and 2019.
+
+-   Time: Time period.
+
+-   GeoID: Numeric code of geographic area.
+
+-   GeoType: Geography type. There are several methods of delimitation of the geographical area. The most used are UHF42, UHF34, CD and Borough.
+
+-   GeoRank: Geography Rank.
+
+-   Geography: Name of the geography area according to their GeoType.
+
+-   Number: Estimated number of people for whom poverty status is determined, whose annual income falls below 100% of the federal poverty level.
+
+-   Percent: Estimated number of people for whom poverty status is determined, whose annual income falls below 100% of the federal poverty level, divided by the number of people for whom poverty status is determined; expressed as percent.
+
+(data source: <https://a816-dohbesp.nyc.gov/IndicatorPublic/beta/data-explorer/economic-conditions/?id=103#display=links>)
+
+### 2.3 Data Import and cleaning
+
+By looking at our data description, we can see that there are a lot of similar variables between all of our data sets. For example, the Geographical names of the units, as well as their Geographical ID are the same. It is interesting as we will be able to merge all of the data sets to create an harmonized dataframe later on. In order to do that, we start by importing all the datasets. We decided to only keep the following variables going forward: Time, Geography, GeoID and the unique values from each data set. For the data of Income and Population density, there was no available data and we had to get creative by merging other geographic segmentations and converting them to our UHF42 standard. 
+
+#### 2.3.1 Air Quality
+
+We begin by importing our excel file "PM2.5". Since we are only interested in the UHF42 values, we are going to filter our rows accordingly. We also decided to only keep the "annual average values" for the year 2010 to 2021 in the time column. This way, we will be able to show how air pollution has changed in the city during the last decade. Below are the 5 first rows of the data set.
+
+```{r, echo = TRUE, results='asis'}
+# Loading the csv file
+pm2.5 <- read.csv(file = here::here("data/PM2.5.csv"))
+
+# Filtering rows based on UHF42 and years 2010-2021
+newpm2.5 <- dplyr::filter(pm2.5, GeoType == "UHF42" & Time %in% c("Annual Average 2021","Annual Average 2020","Annual Average 2019", "Annual Average 2018", "Annual Average 2017","Annual Average 2016","Annual Average 2015","Annual Average 2014","Annual Average 2013","Annual Average 2012","Annual Average 2011","Annual Average 2010"))
+
+# Selecting appropriate variables
+dfpm2.5 <- dplyr::select(newpm2.5, Time, GeoID, Geography, Mean.mcg.m3)
+
+# Displaying first 5 rows in a table
+kable((dfpm2.5[1:5,]),"html") %>%
+  kable_styling(full_width = F)
+```
+
+#### 2.3.2 Common Factors
+
+We pursue with the same logic for the common factors.
+
+**Vegetative Cover**
+
+```{r, echo = TRUE}
+# Loading the csv file
+vegetative_cover <- read.csv(file = here::here("data/Vegetative_Cover.csv"))
+
+# Selecting appropriate variables
+dfvegetative_cover <- dplyr::select(vegetative_cover, Time, GeoID, Geography, Percent)
+
+# Changing the name of column "percent" to "VegePercent"
+colnames(dfvegetative_cover)[4] = "VegePercent"
+
+# Displaying first 5 rows in a table
+kable((dfvegetative_cover[1:5,]),"html") %>%
+  kable_styling(full_width = F)
+```
+
+**Walking distance to a subway station**
+
+```{r, echo = TRUE}
+# Loading the csv file
+walk_dist_subway <- read.csv(file = here::here("data/Walking_Distance_Subway.csv"))
+
+# Selecting appropriate variables
+dfwalk_dist_subway <- dplyr::select(walk_dist_subway, Time, GeoID, Geography, Percent)
+
+# Changing the name of column "percent" to "WalkSubDist"
+colnames(dfwalk_dist_subway)[4] = "WalkSubDist"
+
+# Displaying first 5 rows in a table
+kable((dfwalk_dist_subway[1:5,]),"html") %>%
+  kable_styling(full_width = F)
+```
+
+**Subway density**
+
+```{r, echo = TRUE}
+# Loading the csv file
+subway_density <- read.csv(file = here::here("data/Subway_Density.csv"))
+
+# Selecting appropriate variables
+dfsubway_density <- dplyr::select(subway_density, Time, GeoID, Geography, Density)
+
+# Changing the name of column "percent" to "SubdDensity"
+colnames(dfsubway_density)[4] = "SubDensity"
+
+# Displaying first 5 rows in a table
+kable((dfsubway_density[1:5,]),"html") %>%
+  kable_styling(full_width = F)
+```
+
+**Bicycle network**
+
+```{r, echo = TRUE}
+# Loading the csv file
+bicycle_network <- read.csv(file = here::here("data/Bicycle_Network.csv"))
+
+# Selecting appropriate variables
+dfbicycle_network <- dplyr::select(bicycle_network, Time, GeoID, Geography, Percent)
+
+# Changing the name of column "percent" to "BicPercent"
+colnames(dfbicycle_network)[4] = "BicPercent"
+
+# Displaying first 5 rows in a table
+kable((dfbicycle_network[1:5,]),"html") %>%
+  kable_styling(full_width = F)
+```
+
+**Traffic density**
+
+```{r, echo = TRUE}
+# Loading the csv file
+traffic_density <- read.csv(file = here::here("data/Traffic_Density.csv"))
+
+# Selecting appropriate variables
+dftraffic_density <- dplyr::select(traffic_density, Time, GeoID, Geography, TrafficDensity)
+
+# Changing the name of column "percent" to "TrafDensity"
+colnames(dftraffic_density)[4] = "TrafDensity"
+
+# Displaying first 5 rows in a table
+kable((dftraffic_density[1:5,]),"html") %>%
+  kable_styling(full_width = F)
+```
+
+#### 2.3.3 Socio-demographics factors
+
+**Population Density**
+
+In order to calculate the population density, we need two elements: population count and the square kilometers of each UHF zone. On the Prison Policy initiative website, we found a table giving the total population per UHF code, but there wasn't a possibility of downloading a csv file. We decided to choose the data scraping method to retrieve these vital pieces of data. To do so, we use the *rvest* package to data scrape the website. We create the html variable and assign it to the website, and using a CSS selector, we are able to select the data we want. We select the 84 elements corresponding to the sum of UHF codes and population counts, and create a population variable.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(rvest)
+
+html <- read_html("https://www.prisonpolicy.org/origin/ny/uhf_districts.html")
+
+population <- html %>% 
+  html_elements("td:nth-child(1) , td:nth-child(6)") %>% 
+  html_text2() %>% 
+  .[1:84]
+```
+
+Our result is now located in a vector and we need to convert it to a dataframe. First, we sequence along even and odd numbers, based on index of vectors to create seperated vectors containing UHF code and population count. Then, we create a dataframe and rename the columns. Now, we convert character columns into numeric. We also remove the commas in the Popcount column.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+n <- length(population)
+popuhfcode <- c(population[seq(n) %% 2 == 1])
+popcount <- c(population[seq(n) %% 2 == 0])
+
+dfpop<- data.frame(popuhfcode,popcount)
+
+colnames(dfpop)[1] = "GeoID"
+colnames(dfpop)[2] = "Popcount"
+
+# Now we convert character columns into numeric. We also remove the comas in the column Popcount
+dfpop$GeoID <- as.numeric(dfpop$GeoID)
+dfpop$Popcount <- as.numeric(sub(",", "", dfpop$Popcount,fixed = TRUE))
+```
+
+For the Population density of each UHF code, we use the same techniques. However, we face another difficulty: we only have the values per Zip Code, not by UHF42 areas. We initially tried doing things manually by using a Map and writing the conversion by hand, but this was extremely inaccurate and we need to reach precise results. We wrote an email to the NYC open data, who nicely sent us a conversation table for transforming Zip Codes into the respective UHF areas.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+html2 <- read_html("https://namecensus.com/zip-codes/new-york/")
+
+squaremeter <- html2 %>% 
+  html_elements("td:nth-child(4) , td:nth-child(1)") %>% 
+  html_text2() %>% 
+  .[1:2580]
+
+n <- length(squaremeter)
+zipcode <- c(squaremeter[seq(n) %% 2 == 1])
+sqmeter <- c(squaremeter[seq(n) %% 2 == 0])
+uhfsize <- data.frame(zipcode,sqmeter)
+
+uhfsize$zipcode <- as.numeric(uhfsize$zipcode)
+uhfsize$sqmeter<- as.numeric(gsub(",", "", uhfsize$sqmeter, fixed = TRUE))
+
+# We convert the square meters to KM2
+uhfsize$sqmeter<- as.numeric(format(as.numeric(uhfsize$sqmeter) / 1000000))
+```
+
+In order to filter the rows, we have to define each Zip Code based on their UHF
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+"UHF101" <- c(10463,10471)
+"UHF102" <- c(10466,10469,10470,10475)
+"UHF103" <- c(10458,10467,10468)
+"UHF104" <- c(10461,10462,10464,10465,10472,10473)
+"UHF105" <- c(10453,10457,10460)
+"UHF106" <- c(10451,10452,10456)
+"UHF107"<- c(10454,10455,10459,10474)
+"UHF201"<- c(11211,11222)
+"UHF202"<- c(11201,11205,11215,11217,11231)
+"UHF203"<- c(11213,11212,11216,11233,11238)
+"UHF204"<- c(11207,11208)
+"UHF205"<- c(11220,11232)
+"UHF206" <- c(11204,11218,11219,11230)
+"UHF207"<- c(11203,11210,11225,11226)
+"UHF208"<- c(11234,11236,11239)
+"UHF209"<- c(11209,11214,11228)
+"UHF210"<- c(11223,11224,11229,11235)
+"UHF211"<- c(11206,11221,11237)
+"UHF301"<- c(10031,10032,10033,10034,10040)
+"UHF302"<- c(10026,10027,10030,10037,10039)
+"UHF303"<- c(10029,10035)
+"UHF304"<- c(10023,10024,10025)
+"UHF305"<- c(10021,10028,10044,10128)
+"UHF306"<- c(10001,10011,10018,10019,10020,10036)
+"UHF307"<- c(10010,10016,10017,10022)
+"UHF308"<- c(10012,10013,10014)
+"UHF309"<- c(10002,10003,10009)
+"UHF310"<- c(10004,10005,10006,10007,10038,10280)
+"UHF401"<- c(11101,11102,11103,11104,11105,11106)
+"UHF402"<- c(11368,11369,11370,11372,11373,11377,11378)
+"UHF403"<- c(11354,11355,11356,11357,11358,11359,11360)
+"UHF404"<- c(11361,11362,11363,11364)
+"UHF405"<- c(11374,11375,11379,11385)
+"UHF406"<- c(11365,11366,11367)
+"UHF407"<- c(11414,11415,11416,11417,11418,11419,11420,11421)
+"UHF408"<- c(11412,11423,11432,11433,11434,11435,11436)
+"UHF409"<- c(11004,11005,11411,11413,11422,11426,11427,11428,11429)
+"UHF410"<- c(11691,11692,11693,11694,11695,11697)
+"UHF501"<- c(10302,10303,10310)
+"UHF502"<- c(10301,10304,10305)
+"UHF503"<- c(10314)
+"UHF504"<- c(10306,10307,10308,10309,10312)
+```
+
+Now, we perform filtering and keep only relevant Zip Codes.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+uhfselected <- uhfsize %>% filter(uhfsize$zipcode %in% c(10463,10471,10466,10469,10470,10475,10458,10467,10468,10461,10462,10464,10465,10472,10473,10453,10457,10460,10451,10452,10456,10454,10455,10459,10474,11211,11222,11201,11205,11215,11217,11231,11213,11212,11216,11233,11238,11207,11208,11220,11232,11204,11218,11219,11230,11203,11210,11225,11226,11234,11236,11239,11209,11214,11228,11223,11224,11229,11235,11206,11221,11237,10031,10032,10033,10034,10040,10026,10027,10030,10037,10039,10029,10035,10023,10024,10025,10021,10028,10044,10128,10001,10011,10018,10019,10020,10036,10010,10016,10017,10022,10012,10013,10014,10002,10003,10009,10004,10005,10006,10007,10038,10280,11101,11102,11103,11104,11105,11106,11368,11369,11370,11372,11373,11377,11378,11354,11355,11356,11357,11358,11359,11360,11361,11362,11363,11364,11374,11375,11379,11385,11365,11366,11367,11414,11415,11416,11417,11418,11419,11420,11421,11412,11423,11432,11433,11434,11435,11436,11004,11005,11411,11413,11422,11426,11427,11428,11429,11691,11692,11693,11694,11695,11697,10302,10303,10310,10301,10304,10305,10314,10306,10307,10308,10309,10312))
+
+uhfselected2 <- uhfselected %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF101) ,101)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF102) ,102)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF103) ,103)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF104) ,104)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF105) ,105)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF106) ,106)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF107) ,107)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF201) ,201)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF202) ,202)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF203) ,203)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF204) ,204)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF205) ,205)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF206) ,206)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF207) ,207)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF208) ,208)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF209) ,209)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF210) ,210)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF211) ,211)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF301) ,301)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF302) ,302)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF303) ,303)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF304) ,304)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF305) ,305)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF306) ,306)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF307) ,307)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF308) ,308)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF309) ,309)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF310) ,310)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF401) ,401)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF402) ,402)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF403) ,403)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF404) ,404)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF405) ,405)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF406) ,406)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF407) ,407)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF408) ,408)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF409) ,409)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF410) ,410)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF501) ,501)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF502) ,502)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF503) ,503)) %>%
+  as.data.frame() %>%
+  mutate(zipcode=replace(zipcode, zipcode %in% (UHF504) ,504)) %>%
+  as.data.frame() 
+```
+
+Here, we group by Zip Code and create our square kilometers column. Then, we convert to dataframe and rename the GeoID column. Finally, we create a new datafram with our two tables and add new column for population density.
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+uhfselected3 <-uhfselected2  %>% group_by(zipcode) %>% 
+  summarise(Km2 = sum(sqmeter),
+            .groups = 'drop')
+
+dfuhfsize <- uhfselected3 %>% as.data.frame()
+colnames(dfuhfsize)[1] <- "GeoID"
+
+dfpop_density <- merge(dfpop,dfuhfsize, by="GeoID")
+dfpop_density <- mutate(dfpop_density, Popdensity = Popcount/Km2)
+
+dfpop_density <- round(dfpop_density)
+
+kable((dfpop_density[1:5,]),"html") %>%
+  kable_styling(full_width = F)
+```
+
+**Median Income per household**
+
+Using the conversion table for transforming Zip Codes, we create the GeoID and Zipcode variables. Last but not least, we had to enter the income data by hand, one zip code after another. We didn't manage to find an available csv file or a website to scrape. We had to click on each Zip Code individually and enter them into a new vector: Income.
+
+```{r, echo = TRUE}
+
+GeoID <- c(101,101,102,102,102,102,103,103,103,104,104,104,104,104,104,105,105,105,106,106,106,107,107,107,107,201,201,202,202,202,202,202,203,203,203,203,203,204,204,205,205,206,206,206,206,207,207,207,207,208,208,208,209,209,209,210,210,210,210,211,211,211,301,301,301,301,301,302,302,302,302,302,303,303,304,304,304,305,305,305,305,306,306,306,306,306,306,307,307,307,307,308,308,308,309,309,309,310,310,310,310,310,310,401,401,401,401,401,401,402,402,402,402,402,402,402,403,403,403,403,403,403,403,404,404,404,404,405,405,405,405,406,406,406,407,407,407,407,407,407,407,407,408,408,408,408,408,408,408,409,409,409,409,409,409,409,409,409,410,410,410,410,410,410,501,501,501,502,502,502,503,504,504,504,504,504)
+
+Zipcode <- c(10463,10471,10466,10469,10470,10475,10458,10467,10468,10461,10462,10464,10465,10472,10473,10453,10457,10460,10451,10452,10456,10454,10455,10459,10474,11211,11222,11201,11205,11215,11217,11231,11213,11212,11216,11233,11238,11207,11208,11220,11232,11204,11218,11219,11230,11203,11210,11225,11226,11234,11236,11239,11209,11214,11228,11223,11224,11229,11235,11206,11221,11237,10031,10032,10033,10034,10040,10026,10027,10030,10037,10039,10029,10035,10023,10024,10025,10021,10028,10044,10128,10001,10011,10018,10019,10020,10036,10010,10016,10017,10022,10012,10013,10014,10002,10003,10009,10004,10005,10006,10007,10038,10280,11101,11102,11103,11104,11105,11106,11368,11369,11370,11372,11373,11377,11378,11354,11355,11356,11357,11358,11359,11360,11361,11362,11363,11364,11374,11375,11379,11385,11365,11366,11367,11414,11415,11416,11417,11418,11419,11420,11421,11412,11423,11432,11433,11434,11435,11436,11004,11005,11411,11413,11422,11426,11427,11428,11429,11691,11692,11693,11694,11695,11697,10302,10303,10310,10301,10304,10305,10314,10306,10307,10308,10309,10312)
+
+Income <- c(60397.00,93657.00,58405.00,67190.00,64643.00,53819.00,37886.00,40639.00,37777.00,60802.00,57266.00,101935.00,74889.00,36038.00,47856.00,31778.00,32378.00,28831.00,32598.00,31351.00,31645.00,23337.00,29439.00,31896.00,28419.00,90871.00,96435.00,139697.00,62952.00,144330.00,122598.00,108525.00,48318.00,29385.00,77343.00,48278.00,100568.00,42276.00,45946.00,55119.00,74072.00,54984.00,78249.00,41907.00,57770.00,57707.00,70776.00,65200.00,60896.00,84116.00,74015.00,29571.00,79524.00,57639.00,76278.00,56908.00,35776.00,66332.00,56308.00,43065.00,65458.00,57375.00,55721.00,53690.00,66902.00,63556.00,53199.00,64716.00,57010.00,45555.00,50686.00,41363.00,33801.00,28408.00,137347.00,137126.00,99067.00,130968.00,131013.00,112658.00,117926.00,96787.00,136208.00,136360.00,101651.00,0.00,97720.00,139188.00,124647.00,130417.00,138661.00,110490.00,130675.00,136154.00,35607.00,129981.00,68220.00,204949.00,184681.00,185268.00,250001.00,95640.00,170385.00,124949.00,81462.00,81677.00,75772.00,86516.00,71865.00,56904.00,61860.00,67582.00,61239.00,56835.00,59910.00,82326.00,45838.00,45527.00,64324.00,82858.00,70777.00,0.00,84356.00,86545.00,92212.00,111094.00,87135.00,75266.00,88117.00,89700.00,77044.00,70102.00,91795.00,64332.00,75599.00,75476.00,73471.00,79210.00,73856.00,79589.00,85190.00,77738.00,85235.00,70990.00,66270.00,62453.00,65845.00,69873.00,72962.00,97845.0,75742.00,104269.00,91836.00,93397.00,102770.00,81688.00,77466.00,82532.00,52605.00,53077.00,52946.00,87755.00,0.00,116205.00,72394.00,70315.00,86895.00,70065.00,64394.00,77136.00,90306.00,83309.00,108808.00,110478.00,102730.00,96785.00)
+```
+
+With these three vectors, we create a dataframe income and group it by GeoID.
+
+```{r, echo = TRUE}
+income <- data.frame(GeoID, Zipcode, Income)
+
+# Group by GeoID
+dfincome <- income  %>% group_by(GeoID) %>% 
+  summarise(MedianIncome = (sum(Income)/(length(GeoID))),
+            .groups = 'drop')
+
+dfincome <- round(dfincome)
+
+kable((dfincome[1:5,]),"html") %>%
+  kable_styling(full_width = F)
+```
+
+**Neighborhood poverty**
+
+```{r, echo = TRUE}
+# Loading the csv file
+Neighborhood_Poverty <- read.csv(file = here::here("data/Neighborhood_Poverty.csv"))
+
+# Selecting appropriate variables
+dfNeighborhood_Poverty <- dplyr::select(Neighborhood_Poverty, GeoID,Geography,Percent)
+
+# Changing the name of column "percent" to "NeighPercent"
+colnames(dfNeighborhood_Poverty)[3] = "NeighPercent"
+
+# Displaying first 5 rows in a table
+kable((dfNeighborhood_Poverty[1:5,]),"html") %>%
+  kable_styling(full_width = F)
+```
+
+Now, we merge all the tables into a single dataframe, and we remove the column year. We keep the PM2.5 in a seperate table for now, as we will start our analysis on it's evolution through the last decade.
+
+```{r, echo = TRUE}
+Factors <- (list(dfvegetative_cover[,-1],dfwalk_dist_subway[,c(2,4)],dfbicycle_network[,c(2,4)],dfNeighborhood_Poverty[,c(1,3)], dfsubway_density[,c(2,4)], dftraffic_density[,c(2,4)],dfincome[,c(1,2)],dfpop_density[,c(1,4)]) %>% reduce(inner_join, by='GeoID'))
+
+library(DT)
+
+datatable(
+  Factors,
+  options = list(
+    columnDefs = list(list(className = 'dt-center', targets = 5)),
+    scrollX = TRUE,
+    pageLength = 10,
+    lengthMenu = c(10,20,30,40,42)
+  )
+)
+```

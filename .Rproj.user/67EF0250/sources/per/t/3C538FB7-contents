@@ -1,0 +1,1380 @@
+```{r, message = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+# 3. Data modeling
+
+For our credit rating analysis, understanding the variables that influence the creditworthiness of clients is of capital importance for banks. Our exploration encompasses a range of powerful feature selection techniques, including **logistic regression, backward selection, random forest, GLMnet, and LDA.**
+
+## Balancing the classes
+
+As mentioned in the **Data Understanding** section, the class distribution of our response variable is imbalanced. We found that approximately 70% of the observations belong to the "no-default" class, while the remaining 30% belong to the "default" class.
+
+The presence of class imbalance creates a situation where our models are more inclined to prioritize and predict the majority class (no-default) due to its higher prevalence in the data set. Consequently, this bias can result in sub-optimal performance when it comes to accurately identifying instances of the minority class (default), which is of particular importance in our analysis.
+
+Moreover, the imbalanced class distribution leads to a distorted evaluation of model performance. Traditional evaluation metrics, such as accuracy, may be misleading and fail to capture the true predictive capabilities of the model. Machine learning algorithms that assume a balanced class distribution, such as **Logistic regression**, **Support Vector Machines** (SVM), and **Neural Networks**, may be particularly affected by this imbalance and yield compromised results.
+
+Therefore, it is imperative for us to address the class imbalance issue in our modeling approach. During our class, we explored various methods to address class imbalance, including both up-sampling and down-sampling techniques. Among these methods, we found down-sampling to be our preferred approach as up-sampling can lead to the replication of existing observations or the introduction of unrealistic data points.
+
+## 3.1 Feature selection
+
+Our objective is to determine the most significant features for accurately classifying a client's credit score. To achieve this, we will compare the performance of four models: **Logistic Regression**, **Random Forest**, **GLMnet**, and **Linear Discriminant Analysis**. We will evaluate the models using cross-validation and down-sampling techniques on two datasets: **bank** and **bank_grouped**.
+
+The comparison will involve analyzing the results of each model on both data sets and identifying the top three variables that are the most relevant for the classification task.
+
+As mentioned during the **Data Preparation**, we are going to focus on sensitivity, which can be found in the confusion matrix as the [***negative predicted value***]{.underline}.
+
+### 3.1.1 Logistic Regression Model
+
+We begin our analysis with logistic regression. This is a popular and intuitive model as it computes a probability for each observation to predict which class it should belong to. We start with our training samples, which are not balanced, and apply cross-validation to both the bank and bank_grouped datasets. Then, we repeat the process with balanced samples for our training data.
+
+```{r,results = 'hide',warning=FALSE,  echo = TRUE}
+### Logistic Regression, Unbalanced
+
+library(caret)
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex1 <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+trainData1 <- bank[trainIndex1, ]
+testData1 <- bank[-trainIndex1, ]
+trainIndex2 <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+trainData2 <- bank_grouped[trainIndex2, ]
+testData2 <- bank_grouped[-trainIndex2, ]
+
+# Perform logistic regression with balanced data using caret
+log_reg_model1 <- train(
+  RESPONSE ~ .,
+  data = trainData1,
+  method = "glm",
+  family = "binomial",
+  trControl = trainControl(method = "cv", number = 10)
+)
+log_reg_model2 <- train(
+  RESPONSE ~ .,
+  data = trainData2,
+  method = "glm",
+  family = "binomial",
+  trControl = trainControl(method = "cv", number = 10)
+)
+# Print the model details
+summary(log_reg_model1)
+summary(log_reg_model2)
+
+# Predict using the trained logistic regression model
+predictions1 <- predict(log_reg_model1, newdata = testData1)
+predictions2 <- predict(log_reg_model2, newdata = testData2)
+
+# Print the confusion matrix on testing
+confusionMatrix(predictions1, testData1$RESPONSE) 
+confusionMatrix(predictions2, testData2$RESPONSE) 
+```
+
+We can note that with unbalanced data, our dataset bank seems to better predict the outcome of our dependent variable, with an accuracy of \~75% and a sensitivity of \~87%, compared to 73% accuracy and 86% sensitivity for bank_grouped. 
+
+On the other hand, the AIC is slightly lower (better) for bank_grouped. This is not very surprising as this metric explains the trade-off between the goodness of fit of the model and its complexity. Since we have fewer features in bank_grouped, the AIC is lower.
+
+As for the 5 main variables of the 2 models, we have the following:
+
+**bank:** - Install_rate - CHK_ACCT 0 - CHK_ACCT 01 - HISTORY 0 - HISTORY 1
+
+**bank_grouped:** - Install_rate - CHK_ACCT 0 - CHK_ACCT 01 - HISTORY 0 - Female1
+
+As we can see, some variables are common for both models, such as *Install_rate, chk_acct 0, chk_acct 1* and *history* 0. It is interesting to note that the *female* variable we created appears to be significant for **bank_grouped**.
+
+#### With Cross-Validation and Down-sampling
+
+```{r,results = 'hide',warning=FALSE,  echo = TRUE}
+### Logistic Regression, Balanced
+
+library(caret)
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex3 <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+trainData3 <- bank[trainIndex3, ]
+testData3 <- bank[-trainIndex3, ]
+trainIndex4 <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+trainData4 <- bank_grouped[trainIndex4, ]
+testData4 <- bank_grouped[-trainIndex4, ]
+
+# Perform logistic regression with balanced data using caret
+log_reg_model3 <- train(
+  RESPONSE ~ .,
+  data = trainData3,
+  method = "glm",
+  family = "binomial",
+  trControl = trainControl(method = "cv", number = 10, sampling = "down")
+)
+log_reg_model4 <- train(
+  RESPONSE ~ .,
+  data = trainData4,
+  method = "glm",
+  family = "binomial",
+  trControl = trainControl(method = "cv", number = 10, sampling = "down")
+)
+# Print the model details
+summary(log_reg_model3)
+summary(log_reg_model4)
+
+# Predict using the trained logistic regression model
+predictions3 <- predict(log_reg_model3, newdata = testData1)
+predictions4 <- predict(log_reg_model4, newdata = testData2)
+
+# Print the confusion matrix on testing
+confusionMatrix(predictions3, testData3$RESPONSE) 
+confusionMatrix(predictions4, testData4$RESPONSE) 
+```
+
+Now we can compare the two models with balanced data. We observe the same pattern: the model with data **Bank** seems to better predict than the one with data **bank_grouped**, in terms of accuracy and sensitivity. The AIC is still lower for **bank_grouped**. There are no significant changes in terms of variable importance.
+
+To conclude our logistic regression analysis, the best model was **bank** with [unbalanced data.]{.underline} We obtained initial insights into which variables might be the most significant. It appears that the installment rate, checking account, and the client's history are highly relevant. We will compare these findings with our next models.
+
+However, some features appear as 'NA' in the outcome table. This could be due to two main reasons. First, it may indicate perfect separation of the data, where the predictors perfectly predict the outcome variable. This can result in infinite coefficients, leading R to assign them as 'NA.' The second explanation could be convergence issues. For example, we may have variables that are highly correlated with each other. This is not surprising given the presence of variables with multiple levels and a high number of features in general. Therefore, drawing a conclusive interpretation solely based on logistic regression is challenging, but it can provide valuable clues.
+
+### Stepwise: backward selection
+
+The backward selection helps us identify the most significant variables and remove the ones that have a little impact on its performance.
+
+#### Backward selection with reg.bank and reg.bank_grouped (logistic regressions)
+
+Both backward models gave us similar results. It gives us with 19 variables instead of 31. Most of them were already highlighted in our logistic regression. We start with an AIC of 961.18 and end with an AIC of 944.35 for the final model:
+
+Bank_grouped model: RESPONSE \~ DURATION + AMOUNT + INSTALL_RATE + PROP_UNKN_NONE + OTHER_INSTALL + RENT + NUM_CREDITS + TELEPHONE + FOREIGN + CHK_ACCT_0 + CHK_ACCT_1 + CHK_ACCT_2 + HISTORY_0 + HISTORY_1 + HISTORY_2 + HISTORY_3 + SAV_ACCT_0 + SAV_ACCT_1 + EMPLOYMENT_1 +EMPLOYMENT_3 + GUARANTOR_0 + PRESENT_RESIDENT_1 + PRESENT_RESIDENT_2 + Female
+
+Bank model: RESPONSE \~ HISTORY + NEW_CAR + USED_CAR + EDUCATION + TELEPHONE + NUM_CREDITS + RENT + OTHER_INSTALL + AGE + PROP_UNKN_NONE + GUARANTOR + INSTALL_RATE + EMPLOYMENT + SAV_ACCT + AMOUNT + DURATION + CHK_ACCT + MALE_SINGLE + FOREIGN
+
+The most insignificant variables are: *Furniture, Radio_TV, Male_mar_or_wid, Present_resident, Retraining, Job, Own_res, Co.applicant, Male_div, Real_estate, Num_dependents, Num_credits.*
+
+```{r,results = 'hide',warning=FALSE,  echo = TRUE}
+bank_glm <- glm(RESPONSE ~ ., bank, family = binomial)
+bank_grouped_glm <- glm(RESPONSE ~ ., bank_grouped, family = binomial)
+
+backward_model_bank <- step(bank_glm, direction = "backward") # AIC 939
+backward_model_bank_grouped <- step(bank_grouped_glm, direction = "backward") # 966.71
+
+# Print the summary of the backward-selected model
+summary(backward_model_bank)
+summary(backward_model_bank_grouped)
+```
+
+#### Backward selection with bank logistic regression model
+
+It gives us with 26 variables instead of 54. Most of them were already highlighted in our logistic regression. We start with an AIC of 964.85 and end with an AIC of 939.9 with these variables retain for the model:
+
+RESPONSE \~ DURATION + NEW_CAR + USED_CAR + EDUCATION + AMOUNT + INSTALL_RATE + MALE_SINGLE + PROP_UNKN_NONE + AGE + OTHER_INSTALL + RENT + TELEPHONE + FOREIGN + CHK_ACCT_0 + CHK_ACCT_1 + CHK_ACCT_2 + HISTORY_0 + HISTORY_1 + HISTORY_2 + HISTORY_3 + SAV_ACCT_0 + SAV_ACCT_1 + EMPLOYMENT_3 + GUARANTOR_0 + PRESENT_RESIDENT_1 + PRESENT_RESIDENT_2
+
+For the model without grouped data, the backward results are quite the same but we find the variables that have been grouped under *Education_Purpose* and *Material_Purpose* appearing. Also, *EMPLOYMENT_1* and *AGE* are kept here.
+
+::: callout-tip
+## Fact
+
+Top 5 most important variables are: installement rate, checking account (0), checking account (1), history (0) and history(1)
+:::
+## 3.1.2 Random Forest
+
+### Random Forest Imbalanced and variable importance
+
+In `randomForest`, the variable importance is typically calculated based on the mean decrease in accuracy and Gini index. `randomForest` function cannot handle a categorical predictor variable in a data set that has more than 53 categories. Using the `sapply` function we check that all the variables have less than or equal to 53 unique values.
+
+Our analysis suggests that the two models exhibit comparable outcomes in terms of variable importance. The top three influential predictors in the first model were identified as the status of the checking account, specifically of type 0 and 3, and the duration of the loan. In contrast, the unique difference with the second model is that the third most important variable is history. This makes sense as a client's capacity of paying a loan will mainly depend on their current account and their credit history, client that has once make a default is more likely to do it again. Logically, it also depends on the amount of the credit, being the 4th most important variable for both models.
+
+In conclusion, when a client enters in the bank, in order to successfully detect client's risk to default, bankers allocate their attention and resources primarily on the checking account (type 0 and 3), the duration of the loan and the history. On the other hand, the number of people for whom liable to provide maintenance (*num_dependents*) and the number of years the client has been present resident (*present_resident*) are almost not significant for our objective.
+
+::: callout-tip
+## Fact
+
+Top 5 most important variables are: status of checking account, duration, history and amount
+:::
+```{r,results = 'hide',warning=FALSE,  echo = TRUE}
+library(randomForest)
+data(bank)
+data(bank_grouped)
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+trainDataB <- bank[trainIndex, ]
+testDataB <- bank[-trainIndex, ]
+trainIndex1 <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+trainDataBG <- bank_grouped[trainIndex1, ]
+testDataBG <- bank_grouped[-trainIndex1, ]
+
+# Check that we have less or equal 53 unique values 
+sapply(trainDataB, function(x) length(unique(x))) 
+sapply(trainDataBG, function(x) length(unique(x))) 
+
+# Apply the RandomForest package 
+rf_model_1 <- randomForest(RESPONSE ~ ., data = trainDataB, ntree = 500, mtry = 4, importance = TRUE, localImp = TRUE, na.action = na.roughfix, replace = FALSE) # fit random forest to the first model  
+rf_model_2 <- randomForest(RESPONSE ~ ., data = trainDataBG, ntree = 500, mtry = 4, importance = TRUE, localImp = TRUE, na.action = na.roughfix, replace = FALSE) # fit random forest to the second model
+print(rf_model_1) 
+print(rf_model_2)
+var_imp_1 <- importance(rf_model_1)
+var_imp_2 <- importance(rf_model_2)
+varImpPlot(rf_model_1, cex.axis = 0.8)
+varImpPlot(rf_model_2, cex.axis = 0.8)
+head(round(importance(rf_model_1), 2))
+head(round(importance(rf_model_2), 2))
+```
+
+### Random Forest Balanced: down-sampling
+
+```{r,results = 'hide',warning=FALSE,  echo = TRUE}
+# Apply the randomForest with Cross-Validation and Down-sampling 
+model_rf1 <- caret::train(RESPONSE ~ .,
+                         data = trainDataB,
+                         method = "rf",
+                         preProcess = NULL,
+                         trControl = trainControl(method = "repeatedcv", number = 10,
+                                                  repeats = 10, verboseIter = FALSE, sampling = "down")
+
+
+                                                                          )
+model_rf2 <- caret::train(RESPONSE ~ .,
+                         data = trainDataBG,
+                         method = "rf",
+                         preProcess = NULL,
+                         trControl = trainControl(method = "repeatedcv", number = 10,
+                                                  repeats = 10, verboseIter = FALSE, sampling = "down")
+                         )
+model_test <- 
+# Make predictions on the testing data
+predictions1 <- predict(model_rf1, newdata = testDataB)
+predictions2 <- predict(model_rf2, newdata = testDataBG)
+# Generate the confusion matrix on the testing 
+confusion_matrixRFB <- caret::confusionMatrix(predictions1, testDataB$RESPONSE)
+confusion_matrixRFBG <- caret::confusionMatrix(predictions2, testDataBG$RESPONSE)
+# Print the confusion matrix
+print(confusion_matrixRFB) # 52.8%
+print(confusion_matrixRFBG) # 48.5%
+```
+
+### Model Selection
+
+Using the `plot()` function, we can visualize the performance of the model and the relative importance of each feature. The red line represents the class 1 and the green line the class 0 of our target variable: *response*. We can see that the greater misclassification is contained in the class 0, meaning that there are more false negatives than false positives. In our dataset, there is a higher likelihood of misclassifying clients who are actually in the default category but are classified as non-default by our model. As our primary objective is to accurately classify these observations to minimize the number of false negatives, the number of false negatives need to be minimised. Therefore, we aim to tune hyper-parameters, such as increasing the decision threshold, to achieve this goal. On the other hand, false positives, when a client is classified as default but is actually non-default, are less important. To mitigate the impact of these misclassifications, we can consider implementing a compensatory gesture, such as offering a bottle of wine. Having said that, the most important metric for our classification "quality" is sensitivity. Let's compute the confusion matrix on the testing for both models, the balanced models and compare the results to decide which model we are going to keep. The data frame **bank** has a sensitivity of 64% and of 53% for the balanced model. On the other side, **bank_grouped** of 95% and the balanced model 48%. This makes totally sense as balancing the data creates more positive observations (default), therefore increasing the probability of having a False Negative. This clearly explains why the sensitivity is lower for the balanced models. Therefore, based on these metrics, we would choose to work with **bank_grouped.**
+
+To end with our analysis, we will be comparing the confusion matrix on both training and testing data to see if there is overfitting using the F1 metric, as it's robust to class imbalance. We got the following results: for *bank*: 0.45 in the training and 0.86 in the testing; for **bank_grouped**: 0.50 in the training and 0.86 in the testing. We can conclude that there is no over fitting in the randomForest model.
+
+In conclusion, even though **bank** and **bank_grouped** has similar results, we would choose **bank_grouped** without Cross Validation and down-sampling, as it has fewer False Negatives than the bank models.
+
+::: callout-tip
+## Fact
+
+The best model in Random Forest is drawned from bank_grouped and achieves a sensitivity of 95% without Cross-Validation + Imbalanced
+:::
+```{r,results = 'hide',warning=FALSE,  echo = TRUE}
+data(bank)
+
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+trainDataB <- bank[trainIndex, ]
+testDataB <- bank[-trainIndex, ]
+
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex1 <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+trainDataBG <- bank_grouped[trainIndex1, ]
+testDataBG <- bank_grouped[-trainIndex1, ]
+
+# Plot the randomForest
+plot(rf_model_1)
+plot(rf_model_2)
+# Plot the confusion matrix on the training 
+rf_model_1$confusion
+rf_model_2$confusion
+# Plot the confusion matrix on the testing to check how the model works for unseen data for both models and compare sensitivity 
+predictions_1 <- predict(rf_model_1, newdata = testDataB)
+confusionMatrix(predictions_1, testDataB$RESPONSE) # 64.44%
+predictions_2 <- predict(rf_model_2, newdata = testDataBG)
+confusionMatrix(predictions_2, testDataBG$RESPONSE) # 95.31% 
+
+# Compute the F1 on the testing and training confusion matrices 
+confusion_1 <- rf_model_1$confusion
+confusion_2 <- rf_model_2$confusion
+precision_1 <- confusion_1[2, 2] / sum(confusion_1[, 2])
+recall_1 <- confusion_1[2, 2] / sum(confusion_1[2, ])
+f1_score_1 <- 2 * (precision_1 * recall_1) / (precision_1 + recall_1)
+
+precision_2 <- confusion_2[2, 2] / sum(confusion_2[, 2])
+recall_2 <- confusion_2[2, 2] / sum(confusion_2[2, ])
+f1_score_2 <- 2 * (precision_2 * recall_2) / (precision_2 + recall_2)
+print(f1_score_1) # f1 score of bank in the training 
+print(f1_score_2) # f1 score of bank_grouped in the training
+# Compute confusion matrix for rf_model_1
+cm_1 <- confusionMatrix(predictions_1, testDataB$RESPONSE)
+print(cm_1)
+# Compute F1 score for rf_model_1
+f1_1 <- cm_1$byClass["F1"]
+
+# Compute confusion matrix for rf_model_2
+cm_2 <- confusionMatrix(predictions_2, testDataBG$RESPONSE)
+print(cm_2)
+# Compute F1 score for rf_model_2
+f1_2 <- cm_2$byClass["F1"]
+
+# Print the F1 scores
+print(f1_1) # f1 score of bank in the testing
+print(f1_2) # f1 score of bank_grouped in the testing 
+```
+
+## 3.1.3 GlmNet
+
+Generalized linear models are very powerful as they allow for the reduction of dimensionality and the attenuation of a feature's impact on predictions. There are two main parameters to consider: Alpha and Lambda. Alpha measures the mixing of both the L1 (Lasso) and L2 (Ridge) parameters. When Alpha is closer to 1, more emphasis is placed on Lasso. This means that irrelevant variables may converge to 0. Conversely, when the value is close to 0, it resembles Ridge more closely. In this case, the variables never vanish; their impact decreases towards 0, but they are never exactly 0. Lambda represent the level of regularization applied to the model. A low value means that the impact of individual variables are going to be more pronounced during the fit of the training data. The higher it is, the higher the shrinkage of their coefficients.
+
+### GLMNET Imbalanced
+
+```{r,results = 'hide',warning=FALSE,  echo = TRUE}
+# GLMNET Unbalanced
+
+library(caret)
+library(glmnet)
+
+# Split the dataset into training and testing sets
+set.seed(123)
+
+trainIndex1 <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+trainData1 <- bank[trainIndex1, ]
+testData1 <- bank[-trainIndex1, ]
+
+trainIndex2 <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+trainData2 <- bank_grouped[trainIndex2, ]
+testData2 <- bank_grouped[-trainIndex2, ]
+
+# Specify the training control settings
+ctrlG1 <- trainControl(method = "cv",   # Cross-validation
+                       number = 10,     # Number of folds
+                       verboseIter = FALSE)  # Don't print results
+
+ctrlG2 <- trainControl(method = "cv",   
+                       number = 10,
+                       verboseIter = FALSE)
+
+modelG1 <- train(RESPONSE ~ .,       # Formula for the model
+                 data = trainData1,  # Training data
+                 method = "glmnet",  # Model to train
+                 trControl = ctrlG1)  # Training control
+
+modelG2 <- train(RESPONSE ~ .,     
+                 data = trainData2,       
+                 method = "glmnet", 
+                 trControl = ctrlG2)   
+
+# Make predictions on new data
+predictionsG1 <- predict(modelG1, newdata = testData1)
+predictionsG2 <- predict(modelG2, newdata = testData2)
+
+# Create confusion matrices
+confusion_matrix_G1 <- confusionMatrix(predictionsG1, testData1$RESPONSE)
+confusion_matrix_G2 <- confusionMatrix(predictionsG2, testData2$RESPONSE)
+
+# Print confusion matrices
+print(confusion_matrix_G1)
+print(confusion_matrix_G2)
+
+# Access lambda values
+lambda_valuesG1 <- modelG1$finalModel$lambda
+lambda_valuesG2 <- modelG2$finalModel$lambda
+
+# Print best lambda values
+best_lambda_G1 <- modelG1$bestTune$lambda
+best_lambda_G2 <- modelG2$bestTune$lambda
+
+cat("Best Lambda (Model G1):", best_lambda_G1, "\n")
+cat("Best Lambda (Model G2):", best_lambda_G2, "\n")
+
+# Perform permutation-based variable importance
+var_impG1 <- varImp(modelG1, scale = FALSE, type = 1)
+var_impG2 <- varImp(modelG2, scale = FALSE, type = 1)
+
+# Output lambda values and variable importance
+for (i in 1:ncol(bank) - 1) {   # Exclude the response variable from iteration
+  var_nameG1 <- colnames(bank)[i]
+  lambda_valG1 <- lambda_valuesG1[i]
+  importanceG1 <- var_impG1$importance[var_nameG1,]
+
+
+  cat("Variable:", var_nameG1, "\n")
+  cat("Lambda value:", lambda_valG1, "\n")
+  cat("Variable Importance:", importanceG1, "\n")
+  cat("\n")
+}
+  
+for (i in 1:ncol(bank_grouped) -1) {
+  var_nameG2 <- colnames(bank_grouped)[i]
+  lambda_valG2 <- lambda_valuesG2[i]
+  importanceG2 <- var_impG2$importance[var_nameG2,]
+  
+  cat("-------------------------------")
+  cat("Variable:", var_nameG2, "\n")
+  cat("Lambda value:", lambda_valG2, "\n")
+  cat("Variable Importance:", importanceG2, "\n")
+}
+
+# Print the best model's tuning parameters
+print(modelG1$bestTune)
+print(modelG2$bestTune)
+
+
+# Print the best model's performance
+print(modelG1$results)
+print(modelG2$results)
+
+# Print the predictions
+print(predictionsG1)
+print(predictionsG2)
+
+# Plot the models
+plot(modelG1)
+plot(modelG2)
+```
+
+For our first 2 (unbalanced) models, we have alpha values of 0.1 for model 1, and 0.55 for model 2. It shows that model 2 is more inclined towards a Lasso regression. Regarding the lambda values, they are very close at around \~0.0029. Therefore, they have around the same amount of shrinkage applied on the features.
+
+The accuracy of both model is very close, at \~77 and \~76% respectively. However, the specificity for our bank dataset is at 81%, which is better than bank_grouped at 64%.
+
+### GLMNET Balanced: down-sampling
+
+```{r,results = 'hide',warning=FALSE,  echo = TRUE}
+### GLMNET Balanced
+
+library(caret)
+# Split the dataset into training and testing sets
+set.seed(123)
+
+
+trainIndex3 <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+trainData3 <- bank[trainIndex3, ]
+testData3 <- bank[-trainIndex3, ]
+
+trainIndex4 <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+trainData4 <- bank_grouped[trainIndex4, ]
+testData4 <- bank_grouped[-trainIndex4, ]
+
+# Specify the training control settings
+ctrlG3 <- trainControl(method = "cv",   # Cross-validation
+                     number = 10,     # Number of folds
+                     verboseIter = FALSE,
+                     sampling = "down")  # don't print results
+
+ctrlG4 <- trainControl(method = "cv",   
+                     number = 10,
+                     verboseIter = FALSE)
+
+modelG3 <- train(RESPONSE ~ .,       # Formula for the model
+               data = bank,        # Training data
+               method = "glmnet",  # Model to train
+               trControl = ctrlG3)   # Training control
+
+modelG4 <- train(RESPONSE ~ .,     
+               data = bank_grouped,       
+               method = "glmnet", 
+               trControl = ctrlG4)   
+
+# Perform permutation-based variable importance
+var_impG3 <- varImp(modelG3, scale = FALSE, type = 1)
+var_impG4 <- varImp(modelG4, scale = FALSE, type = 1)
+
+# Access lambda values
+lambda_valuesG3 <- modelG3$finalModel$lambda
+lambda_valuesG4 <- modelG4$finalModel$lambda
+
+
+# Output lambda values and variable importance
+for (i in 1:ncol(bank) - 1) {   # Exclude the response variable from iteration
+  var_nameG3 <- colnames(bank)[i]
+  lambda_valG3 <- lambda_valuesG3[i]
+  importanceG3 <- var_impG3$importance[var_nameG3,]
+
+	var_nameG4 <- colnames(bank_grouped)[i]
+  lambda_valG4 <- lambda_valuesG4[i]
+  importanceG4 <- var_impG3$importance[var_nameG4,]
+
+  cat("Variable:", var_nameG3, "\n")
+  cat("Lambda value:", lambda_valG3, "\n")
+  cat("Variable Importance:", importanceG3, "\n")
+  cat("\n")
+  cat("Variable:", var_nameG4, "\n")
+  cat("Lambda value:", lambda_valG4, "\n")
+  cat("Variable Importance:", importanceG4, "\n")
+}
+
+for (i in 1:ncol(bank) - 1) {   # Exclude the response variable from iteration
+	var_nameG4 <- colnames(bank_grouped)[i]
+  lambda_valG4 <- lambda_valuesG4[i]
+  importanceG4 <- var_impG3$importance[var_nameG4,]
+  cat("\n")
+  cat("Variable:", var_nameG4, "\n")
+  cat("Lambda value:", lambda_valG4, "\n")
+  cat("Variable Importance:", importanceG4, "\n")
+
+}
+
+# Make predictions on new data
+predictionsG3 <- predict(modelG3, newdata = testData3)
+predictionsG4 <- predict(modelG4, newdata = testData4)
+
+# Create confusion matrices
+confusion_matrix_G3 <- confusionMatrix(predictionsG3, testData3$RESPONSE)
+confusion_matrix_G4 <- confusionMatrix(predictionsG4, testData4$RESPONSE)
+
+# Print confusion matrices
+print(confusion_matrix_G3)
+print(confusion_matrix_G4)
+
+# Print the best model's tuning parameters
+print(modelG3$bestTune)
+print(modelG4$bestTune)
+
+# Print the best model's performance
+print(modelG3$results)
+print(modelG4$results)
+
+# Make predictions on new data
+predictionsG3 <- predict(modelG3, newdata = testData3)
+predictionsG4 <- predict(modelG4, newdata = testData4)
+
+# Print the predictions
+print(predictionsG3)
+print(predictionsG4)
+
+plot(modelG3)
+plot(modelG4)
+```
+::: callout-tip
+## Fact
+
+The best model in GLMNet is drawned from bank and achieves a sensitivity of 90% with Cross-Validation + Down-sampling
+:::
+With our balanced dataset, we now have an alpha value of 0.1 for our model 3 and 4. It means that they will have mostly a Ridge regression behaviour. The lambdas are not the same anymore, at 0.03 for bank and 0.0003 for bank_grouped. The shrinkage is more pronounced for model 3. It makes sense as it has more variables and therefore higher incentive to remove the effect of some features.
+
+The accuracy for model 3 is still around 77%, but it is now at 81% for model 4. However, Model 3 is still better regarding specificity, at almost 90%. It is therefore our best model for this generalized linear application.
+
+The 5 most relevant variables of model 3 are: - DURATION - AMOUNT - INSTALL_RATE - CO.APPLICANT - REAL_ESTATE
+::: callout-tip
+## Fact
+
+Top 5 most important variables are: duration, amount, installement rate, co-applicant and real-estate
+:::
+## 3.1.4 LDA : Linear Discriminant Analysis
+
+The utilization of LDA for feature selection showcases its potential as a valuable technique in data preprocessing and model building.
+
+### LDA Imbalanced
+
+We obtained promising results in terms of classification accuracy. The selected features allowed us to achieve a sensitivity of **61.4%** for the **bank** dataset and **61.9** for the **bank_grouped** dataset.
+
+```{r,results = 'hide',warning=FALSE,message=FALSE,  echo = TRUE}
+library(MASS)
+library(caret)
+data(bank_grouped)
+
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex1 <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+trainDataBG <- bank_grouped[trainIndex1, ]
+testDataBG <- bank_grouped[-trainIndex1, ]
+
+set.seed(123)
+trainIndex <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+trainDataB <- bank[trainIndex, ]
+testDataB <- bank[-trainIndex, ]
+
+# Define the training control for cross-validation
+ctrl <- trainControl(method = "cv", number = 10)
+
+# Perform LDA with cross-validation
+lda_fit1 <- train(RESPONSE ~ ., data = trainDataB, method = "lda", trControl = ctrl)
+lda_fit2 <- train(RESPONSE ~ ., data = trainDataBG, method = "lda", trControl = ctrl)
+
+# Print the cross-validated LDA model
+print(lda_fit1)
+print(lda_fit2)
+# Predict on the testing set
+lda_pred1 <- predict(lda_fit1, newdata = testDataB)
+lda_pred2 <- predict(lda_fit2, newdata = testDataBG)
+
+# Evaluate model performance on testing set
+confusionMatrix(lda_pred1, testDataB$RESPONSE) # 61.4%
+confusionMatrix(lda_pred2, testDataBG$RESPONSE) # 61.9%
+plot(lda_pred1)
+plot(lda_pred2)
+```
+
+### LDA Balanced: down-sampling
+
+```{r, warning=FALSE, results='hide',  echo = TRUE}
+# Perform LDA with downsampling
+# Define the training control for cross-validation
+ctrl_downsampling <- trainControl(method = "cv", number = 10, sampling ="down")
+
+lda_fit1_downsampling <- train(RESPONSE ~ ., data = trainDataB, method = "lda", trControl = ctrl_downsampling)
+lda_fit2_downsampling <- train(RESPONSE ~ ., data = trainDataBG, method = "lda", trControl = ctrl_downsampling)
+
+# Print the downsampling LDA models
+print(lda_fit1_downsampling)
+print(lda_fit2_downsampling)
+
+# Predict on the testing set
+lda_pred1_downsampling <- predict(lda_fit1_downsampling, newdata = testDataB)
+lda_pred2_downsampling <- predict(lda_fit2_downsampling, newdata = testDataBG)
+
+# Evaluate model performance on testing set
+
+confusionMatrix(lda_pred1_downsampling, testDataB$RESPONSE) # 44% 
+confusionMatrix(lda_pred2_downsampling, testDataBG$RESPONSE) # 52% 
+plot(lda_pred1_downsampling)
+plot(lda_pred2_downsampling)
+```
+::: callout-tip
+## Fact
+
+The best model in LDA is drawned from bank-grouped and achieves a sensitivity of 63% with Cross-Validation + Imbalanced
+:::
+### Variable importance
+
+Because of the normalization technique applied in the data preparation, there are variables in our data set that have the same value for all instances. Therefore, we are unable to apply the variable importance using the LDA.
+
+## 3.2 Models
+
+In this section, we will explore the implementation of three popular machine learning models for classification tasks: Classification Trees, Neural Networks, and Support Vector Machines (SVM). In order to find the best model, we will tune the hyper-parameters, by applying cross-validation and down-sampling. Then we will compare the results obtained. Their performance will be assessed exclusively on their sensitivity level through their respective confusion matrix.
+
+### 3.2.1 Classification trees
+
+**Classification** trees provide interpretable rules for classification and can handle both categorical and numerical features. We have performed two classification trees for the datasets **bank_grouped** and **bank**. We subsequently performed pruning operations in order to cut out the features that were less relevant, in order to see if the model are improved.
+
+#### Classification tree: not pruned
+
+##### With bank
+
+```{r,warning=FALSE, results='hide',  echo = TRUE}
+library(rpart)
+
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+trainData <- bank[trainIndex, ]
+testData <- bank[-trainIndex, ]
+
+# Train the classification tree model
+classification_tree <- rpart(
+  RESPONSE ~ .,
+  data = trainData,
+  method = "class",
+  control = rpart.control(cp = 0.001)
+)
+
+# Print the summary of the classification tree
+summary(classification_tree)
+
+# Make predictions on the test dataset
+predictions <- predict(classification_tree, newdata = testData, type = "class")
+
+# Print the confusion matrix
+confusionMatrix(predictions, testData$RESPONSE)
+```
+
+```{r,warning=FALSE,  echo = TRUE}
+library(rpart.plot)
+par(mar = c(2, 2, 2, 2))  # Adjust the margin size
+par(cex = 2)  # Adjust the text size
+
+rpart.plot(classification_tree)
+```
+
+-   The sensitivity is at 81.1%, which is a promising result.
+
+##### With bank_grouped
+
+```{r,warning=FALSE, message=FALSE, results='hide',  echo = TRUE}
+library(rpart)
+
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+trainData <- bank_grouped[trainIndex, ]
+testData <- bank_grouped[-trainIndex, ]
+
+# Train the classification tree model
+classificationtree <- rpart(
+  RESPONSE ~ .,
+  data = trainData,
+  method = "class",
+  control = rpart.control(cp = 0.001)
+)
+
+# Print the summary of the classification tree
+summary(classificationtree)
+
+# Make predictions on the test dataset
+predictions <- predict(classificationtree, newdata = testData, type = "class")
+
+# Print the confusion matrix
+confusionMatrix(predictions, testData$RESPONSE)
+```
+
+```{r,warning=FALSE,  echo = TRUE}
+library(rpart.plot)
+par(cex = 2)  # Adjust the text size
+
+rpart.plot(classificationtree)
+```
+
+-   The sensitivity is here at 79.6%, the model with **bank_grouped** seems a bit less performant than with **bank**.
+
+#### Classification tree: pruned
+
+We now apply a complexity parameter which will prune our tree. With set this cp parameter to 0.1, which will leave out the less relevant variables.
+
+##### With bank
+
+```{r,warning=FALSE, results='hide',  echo = TRUE}
+library(rpart)
+library(rpart.plot)
+
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+trainData <- bank[trainIndex, ]
+testData <- bank[-trainIndex, ]
+
+# Train the classification tree model
+classification_tree2 <- rpart(
+  RESPONSE ~ .,
+  data = trainData,
+  method = "class",
+  control = rpart.control(cp = 0.001)
+)
+
+# Prune the classification tree
+prunedtree <- prune(classification_tree2, cp = 0.01)
+summary(prunedtree)
+par(cex = 2)  # Adjust the text size
+# Plot the pruned tree
+rpart.plot(prunedtree)
+
+# Make predictions on the test dataset using the pruned tree
+predictions <- predict(prunedtree, newdata = testData, type = "class")
+
+# Print the confusion matrix
+CM1 <- confusionMatrix(predictions, testData$RESPONSE)
+
+```
+
+##### With bank_grouped
+
+```{r, results='hide',warning=FALSE,  echo = TRUE}
+library(rpart)
+library(rpart.plot)
+
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+trainData <- bank_grouped[trainIndex, ]
+testData <- bank_grouped[-trainIndex, ]
+
+# Train the classification tree model
+classification_tree1 <- rpart(
+  RESPONSE ~ .,
+  data = trainData,
+  method = "class",
+  control = rpart.control(cp = 0.001)
+)
+
+# Prune the classification tree
+pruned_tree <- prune(classification_tree1, cp = 0.01) 
+
+summary(pruned_tree)
+par(cex = 2)  # Adjust the text size
+# Plot the pruned tree
+rpart.plot(pruned_tree)
+
+# Make predictions on the test dataset using the pruned tree
+predictions <- predict(pruned_tree, newdata = testData, type = "class")
+
+# Print the confusion matrix
+CM2 <- confusionMatrix(predictions, testData$RESPONSE)
+```
+
+#### Metrics of performance
+
+The sensitivity of the pruned tree is of 55% .
+
+```{r,warning=FALSE, results='hide',  echo = TRUE}
+CM1
+```
+
+The sensitivity of the pruned tree is 54.9%.
+
+```{r,warning=FALSE, results='hide',  echo = TRUE}
+CM2
+```
+::: callout-tip
+## Fact
+
+The best model in Classification Tree is drawned from bank and achieves a sensitivity of 81% with not pruning
+:::
+
+### 3.2.2 Support Vector machine
+
+#### SVM method with the Radial Basis Imbalanced
+
+```{r,warning=FALSE, results='hide',  echo = TRUE}
+# Load the required libraries
+library(caret)
+library(kernlab)
+
+# Load the dataset (example: iris dataset)
+data(bank)
+data(bank_grouped)
+
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+trainData <- bank[trainIndex, ]
+testData <- bank[-trainIndex, ]
+trainIndex2 <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+trainData2 <- bank_grouped[trainIndex, ]
+testData2 <- bank_grouped[-trainIndex, ]
+# Train the SVM model using caret and kernlab
+svm_model <- train(
+  RESPONSE ~ .,
+  data = trainData,
+  method = "svmRadial",
+  trControl = trainControl(method = "cv", number = 10),
+  tuneLength = 10
+)
+svm_model_2 <- train(
+  RESPONSE ~ .,
+  data = trainData2,
+  method = "svmRadial",
+  trControl = trainControl(method = "cv", number = 10),
+  tuneLength = 10
+)
+# Print the model details
+print(svm_model)
+print(svm_model_2)
+
+# Predict using the trained SVM model
+predictions <- predict(svm_model, newdata = testData)
+predictions2 <- predict(svm_model_2, newdata = testData2)
+
+# Print the confusion matrix (for classification) 
+confusionMatrix(predictions, testData$RESPONSE)  # 65%
+confusionMatrix(predictions2, testData2$RESPONSE) # 63% 
+plot(svm_model)
+plot(svm_model_2)
+```
+
+#### SVM method with the Radial Basis Balanced
+
+```{r,warning=FALSE, results='hide',  echo = TRUE}
+# Load the required libraries
+library(caret)
+library(kernlab)
+
+# Load the dataset (example: iris dataset)
+data(bank)
+data(bank_grouped)
+
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+trainData <- bank[trainIndex, ]
+testData <- bank[-trainIndex, ]
+trainIndex2 <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+trainData2 <- bank_grouped[trainIndex, ]
+testData2 <- bank_grouped[-trainIndex, ]
+# Train the SVM model using caret and kernlab
+svm_model <- train(
+  RESPONSE ~ .,
+  data = trainData,
+  method = "svmRadial",
+  trControl = trainControl(method = "cv", number = 10, sampling = "down"),
+  tuneLength = 10
+)
+svm_model_2 <- train(
+  RESPONSE ~ .,
+  data = trainData2,
+  method = "svmRadial",
+  trControl = trainControl(method = "cv", number = 10, sampling = "down"),
+  tuneLength = 10
+)
+# Print the model details
+print(svm_model)
+print(svm_model_2)
+
+# Predict using the trained SVM model
+predictions <- predict(svm_model, newdata = testData)
+predictions2 <- predict(svm_model_2, newdata = testData2)
+
+# Print the confusion matrix (for classification) 
+confusionMatrix(predictions, testData$RESPONSE)  # 46%
+confusionMatrix(predictions2, testData2$RESPONSE)# 47%  
+plot(svm_model)
+plot(svm_model_2)
+```
+
+#### SVM method with the Linear function Kernel Imbalanced
+
+```{r,warning=FALSE, results='hide',  echo = TRUE}
+# Load the required libraries
+library(caret)
+library(kernlab)
+
+# Load the dataset (example: iris dataset)
+data(bank)
+data(bank_grouped)
+
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+trainData <- bank[trainIndex, ]
+testData <- bank[-trainIndex, ]
+trainIndex2 <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+trainData2 <- bank_grouped[trainIndex, ]
+testData2 <- bank_grouped[-trainIndex, ]
+# Train the SVM model using caret and kernlab
+svm_model <- train(
+  RESPONSE ~ .,
+  data = trainData,
+  method = "svmLinear",
+  trControl = trainControl(method = "cv", number = 10),
+  tuneLength = 10
+)
+svm_model_2 <- train(
+  RESPONSE ~ .,
+  data = trainData2,
+  method = "svmLinear",
+  trControl = trainControl(method = "cv", number = 10),
+  tuneLength = 10
+)
+# Print the model details
+print(svm_model)
+print(svm_model_2)
+
+# Predict using the trained SVM model
+predictions <- predict(svm_model, newdata = testData)
+predictions2 <- predict(svm_model_2, newdata = testData2)
+
+# Print the confusion matrix (for classification) 
+confusionMatrix(predictions, testData$RESPONSE) # 62%
+confusionMatrix(predictions2, testData2$RESPONSE) # 63%
+
+```
+
+#### SVM method with the Linear function Kernel Balanced
+
+```{r, warning=FALSE, results='hide',  echo = TRUE}
+# Load the required libraries
+library(caret)
+library(kernlab)
+
+# Load the dataset (example: iris dataset)
+data(bank)
+data(bank_grouped)
+
+# Split the dataset into training and testing sets
+set.seed(123)
+trainIndex <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+trainData <- bank[trainIndex, ]
+testData <- bank[-trainIndex, ]
+trainIndex2 <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+trainData2 <- bank_grouped[trainIndex, ]
+testData2 <- bank_grouped[-trainIndex, ]
+# Train the SVM model using caret and kernlab
+svm_model <- train(
+  RESPONSE ~ .,
+  data = trainData,
+  method = "svmLinear",
+  trControl = trainControl(method = "cv", number = 10, sampling = "down"),
+  tuneLength = 10
+)
+svm_model_2 <- train(
+  RESPONSE ~ .,
+  data = trainData2,
+  method = "svmLinear",
+  trControl = trainControl(method = "cv", number = 10, sampling = "down"),
+  tuneLength = 10
+)
+# Print the model details
+print(svm_model)
+print(svm_model_2)
+
+# Predict using the trained SVM model
+predictions <- predict(svm_model, newdata = testData)
+predictions2 <- predict(svm_model_2, newdata = testData2)
+
+# Print the confusion matrix (for classification) 
+confusionMatrix(predictions, testData$RESPONSE) # 47% 
+confusionMatrix(predictions2, testData2$RESPONSE) # 50% 
+
+
+```
+::: callout-tip
+## Fact
+
+The best model in SVM is drawned from bank and achieves a sensitivity of 65% with Cross-Validation + Imbalanced
+:::
+
+
+### 3.2.3 Neural Network model
+
+Lastly, we will use neural networks models to make predictions. Neural networks can take many shapes. The core parameters we are going to tweak are the number of nodes, and the decay values. Using cross-validation, we will run multiple models and keep only the best one based on sensitivity. We start using imbalanced data.
+
+#### Neural Network Imbalanced
+
+##### With bank
+
+```{r,warning=FALSE, results='hide',  echo = TRUE}
+# NN Unbalanced, bank
+
+library(nnet)
+library(caret)
+
+# Set up cross-validation
+set.seed(123) 
+# Split the data into training and testing sets
+train_idx <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+train_data <- bank[train_idx, ]
+test_data <- bank[-train_idx, ]
+
+num_folds <- 5  # Number of cross-validation folds
+control <- trainControl(method = "cv", number = num_folds)  # Cross-validation control with balanced training
+
+# Define grid of hyperparameter values
+node_grid <- c(2, 3, 4, 5)  # Set of number of nodes
+decay_grid <- c(0.1, 0.01, 0.001)  # Set of decay values
+
+# Create the tuning grid
+tuning_grid <- expand.grid(size = node_grid, decay = decay_grid)
+
+# Perform cross-validation and tune hyperparameters
+tuned_model <- train(RESPONSE ~ ., data = train_data,
+                     method = "nnet",
+                     trControl = control,
+                     tuneGrid = tuning_grid,
+                     maxit = 200,
+                     verboseIter = FALSE)
+
+# Find the best hyperparameter values
+best_nodes <- tuned_model$bestTune$size
+best_decay <- tuned_model$bestTune$decay
+
+# Train the final model using the best hyperparameter values on the entire training set
+final_model <- nnet(RESPONSE ~ ., data = train_data, size = best_nodes, decay = best_decay, maxit = 200, trace = FALSE)
+
+
+# Evaluate the final model on the test set
+predicted_probs <- predict(final_model, newdata = test_data)
+predicted_classes <- ifelse(predicted_probs > 0.5, 1, 0)
+actual_classes <- test_data$RESPONSE
+confusion_matrix <- table(predicted_classes, actual_classes)
+
+# Print confusion matrix
+print(confusion_matrix)
+
+# Calculate accuracy
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+
+# Calculate sensitivity (true positive rate or recall)
+sensitivity <- confusion_matrix[2, 2] / sum(confusion_matrix[, 2])
+
+# Calculate specificity (true negative rate)
+specificity <- confusion_matrix[1, 1] / sum(confusion_matrix[1, ])
+
+# Print the model parameters
+cat("Number of nodes:", best_nodes)
+cat("Decay value:", best_decay)
+
+# Print the performance metrics
+cat("Accuracy:", accuracy, "\n")
+cat("Sensitivity:", sensitivity, "\n")
+cat("Specificity:", specificity, "\n")
+```
+
+##### With bank_grouped
+
+```{r,warning=FALSE, results='hide',  echo = TRUE}
+# NN Unbalanced, bank_grouped
+
+library(nnet)
+library(caret)
+
+# Set up cross-validation
+set.seed(123) 
+# Split the data into training and testing sets
+train_idx <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+train_data <- bank[train_idx, ]
+test_data <- bank[-train_idx, ]
+
+num_folds <- 5  # Number of cross-validation folds
+control <- trainControl(method = "cv", number = num_folds)  # Cross-validation control with balanced training
+
+# Define grid of hyperparameter values
+node_grid <- c(2, 3, 4, 5)  # Set of number of nodes
+decay_grid <- c(0.1, 0.01, 0.001)  # Set of decay values
+
+# Create the tuning grid
+tuning_grid <- expand.grid(size = node_grid, decay = decay_grid)
+
+# Perform cross-validation and tune hyperparameters
+tuned_model <- train(RESPONSE ~ ., data = train_data,
+                     method = "nnet",
+                     trControl = control,
+                     tuneGrid = tuning_grid,
+                     maxit = 200,
+                     verboseIter = FALSE)
+
+# Find the best hyperparameter values
+best_nodes <- tuned_model$bestTune$size
+best_decay <- tuned_model$bestTune$decay
+
+# Train the final model using the best hyperparameter values on the entire training set
+final_model <- nnet(RESPONSE ~ ., data = train_data, size = best_nodes, decay = best_decay, maxit = 200, trace = FALSE)
+
+
+# Evaluate the final model on the test set
+predicted_probs <- predict(final_model, newdata = test_data)
+predicted_classes <- ifelse(predicted_probs > 0.5, 1, 0)
+actual_classes <- test_data$RESPONSE
+confusion_matrix <- table(predicted_classes, actual_classes)
+
+# Print confusion matrix
+print(confusion_matrix)
+
+# Calculate accuracy
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+
+# Calculate sensitivity (true positive rate or recall)
+sensitivity <- confusion_matrix[2, 2] / sum(confusion_matrix[, 2])
+
+# Calculate specificity (true negative rate)
+specificity <- confusion_matrix[1, 1] / sum(confusion_matrix[1, ])
+
+# Print the model parameters
+cat("Number of nodes:", best_nodes)
+cat("Decay value:", best_decay)
+
+# Print the performance metrics
+cat("Accuracy:", accuracy, "\n")
+cat("Sensitivity:", sensitivity, "\n")
+cat("Specificity:", specificity, "\n")
+```
+
+#### Neural Network Balanced: down-sampling
+
+##### With bank
+
+```{r,warning=FALSE, results='hide',  echo = TRUE}
+# NN Balanced, bank
+
+library(nnet)
+library(caret)
+
+# Set up cross-validation
+set.seed(123) 
+# Split the data into training and testing sets
+train_idx <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+train_data <- bank[train_idx, ]
+test_data <- bank[-train_idx, ]
+
+num_folds <- 5  # Number of cross-validation folds
+control <- trainControl(method = "cv", number = num_folds, sampling = "down")  # Cross-validation control with balanced training
+
+# Define grid of hyperparameter values
+node_grid <- c(2, 3, 4, 5)  # Set of number of nodes
+decay_grid <- c(0.1, 0.01, 0.001)  # Set of decay values
+
+# Create the tuning grid
+tuning_grid <- expand.grid(size = node_grid, decay = decay_grid)
+
+# Perform cross-validation and tune hyperparameters
+tuned_model <- train(RESPONSE ~ ., data = train_data,
+                     method = "nnet",
+                     trControl = control,
+                     tuneGrid = tuning_grid,
+                     maxit = 200,
+                     verboseIter = FALSE)
+
+# Find the best hyperparameter values
+best_nodes <- tuned_model$bestTune$size
+best_decay <- tuned_model$bestTune$decay
+
+# Train the final model using the best hyperparameter values on the entire training set
+final_model <- nnet(RESPONSE ~ ., data = train_data, size = best_nodes, decay = best_decay, maxit = 200, trace = FALSE)
+
+
+# Evaluate the final model on the test set
+predicted_probs <- predict(final_model, newdata = test_data)
+predicted_classes <- ifelse(predicted_probs > 0.5, 1, 0)
+actual_classes <- test_data$RESPONSE
+confusion_matrix <- table(predicted_classes, actual_classes)
+
+# Print confusion matrix
+print(confusion_matrix)
+
+# Calculate accuracy
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+
+# Calculate sensitivity (true positive rate or recall)
+sensitivity <- confusion_matrix[2, 2] / sum(confusion_matrix[, 2])
+
+# Calculate specificity (true negative rate)
+specificity <- confusion_matrix[1, 1] / sum(confusion_matrix[1, ])
+
+# Print the model parameters
+cat("Number of nodes:", best_nodes)
+cat("Decay value:", best_decay)
+
+# Print the performance metrics
+cat("Accuracy:", accuracy, "\n")
+cat("Sensitivity:", sensitivity, "\n")
+cat("Specificity:", specificity, "\n")
+```
+
+##### With bank_grouped
+
+```{r,warning=FALSE, results='hide',  echo = TRUE}
+# NN balanced, bank_grouped
+
+library(nnet)
+library(caret)
+
+# Set up cross-validation
+set.seed(123) 
+# Split the data into training and testing sets
+train_idx <- createDataPartition(bank_grouped$RESPONSE, p = 0.7, list = FALSE)
+train_data <- bank[train_idx, ]
+test_data <- bank[-train_idx, ]
+
+num_folds <- 5  # Number of cross-validation folds
+control <- trainControl(method = "cv", number = num_folds, sampling = "down")  # Cross-validation control with balanced training
+
+# Define grid of hyperparameter values
+node_grid <- c(2, 3, 4, 5)  # Set of number of nodes
+decay_grid <- c(0.1, 0.01, 0.001)  # Set of decay values
+
+# Create the tuning grid
+tuning_grid <- expand.grid(size = node_grid, decay = decay_grid)
+
+# Perform cross-validation and tune hyperparameters
+tuned_model <- train(RESPONSE ~ ., data = train_data,
+                     method = "nnet",
+                     trControl = control,
+                     tuneGrid = tuning_grid,
+                     maxit = 200,
+                     verboseIter = FALSE)
+
+# Find the best hyperparameter values
+best_nodes <- tuned_model$bestTune$size
+best_decay <- tuned_model$bestTune$decay
+
+# Train the final model using the best hyperparameter values on the entire training set
+final_model <- nnet(RESPONSE ~ ., data = train_data, size = best_nodes, decay = best_decay, maxit = 200, trace = FALSE)
+
+
+# Evaluate the final model on the test set
+predicted_probs <- predict(final_model, newdata = test_data)
+predicted_classes <- ifelse(predicted_probs > 0.5, 1, 0)
+actual_classes <- test_data$RESPONSE
+confusion_matrix <- table(predicted_classes, actual_classes)
+
+# Print confusion matrix
+print(confusion_matrix)
+
+# Calculate accuracy
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+
+# Calculate sensitivity (true positive rate or recall)
+sensitivity <- confusion_matrix[2, 2] / sum(confusion_matrix[, 2])
+
+# Calculate specificity (true negative rate)
+specificity <- confusion_matrix[1, 1] / sum(confusion_matrix[1, ])
+
+# Print the model parameters
+cat("Number of nodes:", best_nodes)
+cat("Decay value:", best_decay)
+
+# Print the performance metrics
+cat("Accuracy:", accuracy, "\n")
+cat("Sensitivity:", sensitivity, "\n")
+cat("Specificity:", specificity, "\n")
+```
+
+After running our 4 models, here are our main take-aways:
+
+The best model is **Model 4** (bank_grouped balanced). It has an accuracy of 73%, and a sensitivity of 89%. Which is a good candidate for making our predictions. It contains 4 nodes, and has a decay value of 0.1. On the other hand, the imbalanced data really struggled. Model 1 and model 2 did poorly. They categorized almost everyone to the default class. It results in an accuracy of 30%.
+
+::: callout-tip
+## Fact
+
+The best model in NN is drawned from bank_grouped and achieves a sensitivity of 89% with Cross-Validation + Down-sampling
+:::
+#### 3.2.4 ROC Curves
+
+In our analysis, a uniform cutoff value of 50% was employed across all models. However, it is possible to adjust the cutoff value, which can result in different class distributions. Considering our priority is sensitivity, we can decrease the cutoff value to increase the number of clients classified as defaulters. This adjustment aims to achieve a more balanced distribution of classes and a lower number of wrongly classified high-risk clients. We are more at risk of miss-classifying good credits into bad credits, but as seen previously, it is not our main concern. We prefer correctly classifying more bad credits even if it entails wrongly classifying the good ones.
+
+Below is an example of a ROC curve applied on the glmnet model.
+
+```{r,  echo = TRUE}
+library(pROC)
+library(caret)
+
+# Split the data into training and testing sets
+set.seed(123)
+train_idx <- createDataPartition(bank$RESPONSE, p = 0.7, list = FALSE)
+train_data <- bank[train_idx, ]
+test_data <- bank[-train_idx, ]
+
+# Train your model (replace 'model' with your actual model)
+model <- train(RESPONSE ~ ., data = train_data, method = "glm")
+
+# Obtain predicted probabilities on the test set (replace 'model' with your actual model)
+probabilities <- predict(model, newdata = test_data, type = "prob")
+
+# Compute ROC curve
+roc_obj <- roc(test_data$RESPONSE, probabilities[, 2])
+
+# Plot ROC curve
+plot(roc_obj, main = "ROC Curve", xlab = "1 - Specificity", ylab = "Sensitivity")
+
+```
+
+As we can see, we could put more weight on sensitivity and sacrifice a little bit of accuracy by putting our cutoff at around 65-75%.
+
+## 4. Conclusion
+
+Throughout this project, we pursued two primary objectives. Firstly, we aimed to minimize the number of False Negatives by accurately identifying clients who defaulted. To achieve this, we employed various models and meticulously tuned their hyper-parameters to maximize sensitivity. Among the models evaluated, the two most successful ones are as follows:
+
+-   **Random Forest Model** (bank_grouped): This model achieved a sensitivity of 95% without employing cross-validation or balancing the classes. It demonstrated high accuracy in correctly identifying non-defaulted clients.
+
+-   **GLMnet Model** (bank): Employing cross-validation and down-sampling techniques, this model achieved a sensitivity of 90%. It effectively addressed class imbalance issues and performed well in accurately classifying high-risk clients.
+
+Secondly, we focused on identifying the most influential features that contribute to a client's credit score. Our analysis revealed that three variables play a crucial role in determining a client's creditworthiness upon entering the bank. These variables are:
+
+-   **Status of Checking Account:** This variable provides insights into the client's financial stability and liquidity, which significantly influences their creditworthiness ; specifically, the clients who were registered with a checking account 3, meaning that they don't have a saving account at the bank. For example, in our classification tree, it was the most significant feature to take into consideration.
+
+-   **Duration**: The duration of the loan is a key factor in assessing the client's ability to repay their obligations over a specific period. We found this variable significant in most of our models.
+
+-   **Loan Amount:** The magnitude of the loan amount serves as an indicator of the client's financial capability and impacts their creditworthiness.
+
+By prioritizing attention to these three variables, bankers can effectively evaluate the creditworthiness of clients and make informed decisions. These variables demonstrate the highest significance in determining whether a client will have a favorable credit score or not.
+
+Another recommendation for the bank to achieve better results is to tweak the threshold, as explained in the ROC section. As the cost of false negative is very high, we should lower the threshold to increase the number of positive instances, at the cost of having more false positive observations.
+
+**Limitations:**
+
+We encountered several limitations that impacted our analysis. One notable limitation was the relatively small size of our database. With a larger dataset, our models would have had more opportunities to learn and potentially achieve better performance in terms of sensitivity. The limited data size may have hindered the ability of the models to capture the full range of patterns and intricacies within the data.
+
+Additionally, we faced the challenge of dealing with imbalanced classes. It is expected to have more non-default instances than defaults in a credit scoring dataset, but having a balanced number of observations is generally recommended. To address this issue, we employed downs-sampling, which involved reducing the number of non-default instances to match the number of default instances. While down-sampling helped mitigate the class imbalance problem, it also had its drawbacks. One drawback of down-sampling is the potential loss of valuable information present in the majority class. By discarding instances from the majority class, we may overlook important patterns and characteristics that could have contributed to the classification task.
+
+To conclude, in order to improve our models, we would need more quality observations rather than quantity.
+
+::: {#additional-content}
+<h5>Authors</h5>
+
+<p>Julian Changanaqui\
+Marc Bourleau</p>
+
+<h5>Date</h5>
+
+<p>June 6, 2023</p>
+:::

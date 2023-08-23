@@ -1,0 +1,27 @@
+/* Custom styles for table of contents */
+#TOC {
+  position: fixed;
+  top: 30px; /* Adjust the desired distance from the top */
+  left: 0;
+  width: 12%;
+  margin-left: 2.5em;
+  padding: 1em;
+  background-color: azure;
+  border-right: 1px solid #ddd;
+  overflow-y: auto;
+  max-height: calc(100vh - 20px); /* Adjust the height as needed */
+  z-index: 1;
+}
+
+/* Custom styles for additional content */
+#additional-content {
+  position: fixed;
+  bottom: 30px; /* Adjust the desired distance from the bottom */
+  left: 0;
+  width: 12%;
+  margin: 0;
+  margin-left: 2.5em;
+  padding: 0.5em 0.5em; /* Adjust the padding as needed */
+  background-color: azure;
+  z-index: 1;
+}

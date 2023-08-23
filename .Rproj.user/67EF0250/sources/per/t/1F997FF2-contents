@@ -1,0 +1,15 @@
+---
+title: "Predicting Credit Risk"
+format:
+  html:
+    toc: true
+    toc_float: true
+    toc_left: true
+    code-fold: true
+    code-summary: "Show the code"
+    css: 
+      - "custom.css"
+---
+
+```{r child = c(('Business_Understanding.qmd'),('Data_Understanding.qmd'),('Data_Preparation.qmd'), ('Data_Modeling.qmd'))}
+```

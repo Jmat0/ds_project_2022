@@ -1,0 +1,14 @@
+---
+title: "Analysis on Air Pollution in New York City"
+author: 'Group J: Julian Changanaqui, Charlène Khairallah and Henri P.Gogniat'
+date: "2022-12-15"
+output:
+  html_document:
+    toc: true
+    toc_float : true
+    code_folding : hide
+    theme: united
+---
+
+```{r child = c('intro.Rmd', 'data.Rmd', 'eda.Rmd', 'analysis.Rmd', 'concl.Rmd')}
+```
